@@ -38,31 +38,13 @@ def test_pr_get_monkeypatched(monkeypatch: Any) -> None:
 
 
 def test_pr_timeline_monkeypatched(monkeypatch: Any) -> None:
-    graphql = {
-        "data": {
-            "repository": {
-                "pullRequest": {
-                    "timelineItems": {
-                        "nodes": [
-                            {
-                                "__typename": "IssueComment",
-                                "createdAt": "t1",
-                                "actor": {"login": "a"},
-                            },
-                            {
-                                "__typename": "MergedEvent",
-                                "createdAt": "t2",
-                                "actor": {"login": "b"},
-                            },
-                        ]
-                    }
-                }
-            }
-        }
-    }
+    rest_events = [
+        {"event": "commented", "created_at": "t1", "actor": {"login": "a"}},
+        {"event": "merged", "created_at": "t2", "actor": {"login": "b"}},
+    ]
 
     def fake_run_gh_json(args: list[str]) -> Any:  # noqa: ANN401
-        return graphql
+        return rest_events
 
     monkeypatch.setattr(gh_cli, "run_gh_json", fake_run_gh_json)
 

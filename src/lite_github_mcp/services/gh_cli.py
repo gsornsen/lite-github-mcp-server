@@ -101,40 +101,23 @@ def pr_get(owner: str, name: str, number: int) -> dict[str, Any]:
 def pr_timeline(
     owner: str, name: str, number: int, limit: int | None, cursor: str | None
 ) -> dict[str, Any]:
-    query = (
-        "query($owner:String!,$name:String!,$number:Int!){"
-        "repository(owner:$owner,name:$name){"
-        "pullRequest(number:$number){"
-        "timelineItems(first:100){nodes{__typename createdAt actor{login}}}"
-        "}}}"
-    )
+    # Use REST timeline for broad compatibility
     args = [
         "api",
-        "graphql",
+        f"repos/{owner}/{name}/issues/{number}/timeline",
+        "-H",
+        "Accept: application/vnd.github+json",
         "-F",
-        f"owner={owner}",
-        "-F",
-        f"name={name}",
-        "-F",
-        f"number={number}",
-        "-f",
-        f"query={query}",
+        "per_page=100",
     ]
-    data = run_gh_json(args) or {}
-    nodes = (
-        data.get("data", {})
-        .get("repository", {})
-        .get("pullRequest", {})
-        .get("timelineItems", {})
-        .get("nodes", [])
-    )
+    data = run_gh_json(args) or []
     events: list[dict[str, Any]] = []
-    for n in nodes:
+    for n in data:
         events.append(
             {
-                "type": n.get("__typename"),
+                "type": n.get("event"),
                 "actor": (n.get("actor") or {}).get("login"),
-                "createdAt": n.get("createdAt"),
+                "createdAt": n.get("created_at") or n.get("createdAt"),
             }
         )
     start = decode_cursor(cursor).index
