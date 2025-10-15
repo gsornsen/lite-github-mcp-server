@@ -26,3 +26,12 @@ class BlobResult(BaseModel):
     size: int
     encoding: str = "base64"
     content_b64: str
+
+
+class RepoResolve(BaseModel):
+    repo_path: str
+    origin_url: str | None
+    owner: str | None
+    name: str | None
+    default_branch: str | None
+    head: str | None

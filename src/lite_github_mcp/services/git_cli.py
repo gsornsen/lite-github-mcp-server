@@ -27,6 +27,61 @@ def rev_parse(repo: GitRepo, ref: str = "HEAD") -> str | None:
     return result.stdout.strip() or None
 
 
+def get_remote_origin_url(repo: GitRepo) -> str | None:
+    result = run_command(["git", "remote", "get-url", "origin"], cwd=repo.path)
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def current_branch(repo: GitRepo) -> str | None:
+    # Returns current branch name or None if detached
+    result = run_command(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=repo.path)
+    if result.returncode != 0:
+        return None
+    name = result.stdout.strip()
+    return name if name and name != "HEAD" else None
+
+
+def default_branch(repo: GitRepo) -> str | None:
+    # Try origin/HEAD -> refs/remotes/origin/HEAD -> origin/<branch>
+    result = run_command(
+        ["git", "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"], cwd=repo.path
+    )
+    if result.returncode == 0:
+        # Output like: refs/remotes/origin/main
+        ref = result.stdout.strip()
+        if ref.startswith("refs/remotes/origin/"):
+            return ref.split("/")[-1]
+    # Fallback: current local branch
+    return current_branch(repo)
+
+
+def parse_owner_repo_from_url(url: str) -> tuple[str | None, str | None]:
+    # Supports ssh and https git URLs
+    # ssh: git@github.com:owner/name.git
+    # https: https://github.com/owner/name.git
+    owner = None
+    name = None
+    if "://" in url:
+        try:
+            parts = url.split("//", 1)[1]
+            host_and_path = parts.split("/", 1)[1]
+            owner, name = host_and_path.split("/", 1)
+        except Exception:
+            return None, None
+    else:
+        # likely ssh
+        try:
+            host_and_path = url.split(":", 1)[1]
+            owner, name = host_and_path.split("/", 1)
+        except Exception:
+            return None, None
+    if name.endswith(".git"):
+        name = name[:-4]
+    return owner, name
+
+
 def list_branches(repo: GitRepo, prefix: str | None = None) -> list[str]:
     result = run_command(
         ["git", "for-each-ref", "--format=%(refname:short)", "refs/heads"], cwd=repo.path

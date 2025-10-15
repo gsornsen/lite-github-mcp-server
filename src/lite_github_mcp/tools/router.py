@@ -3,12 +3,22 @@ from typing import Any
 
 from fastmcp.tools.tool import Tool
 
-from lite_github_mcp.schemas.repo import BlobResult, BranchList, TreeEntry, TreeList
+from lite_github_mcp.schemas.repo import (
+    BlobResult,
+    BranchList,
+    RepoResolve,
+    TreeEntry,
+    TreeList,
+)
 from lite_github_mcp.services.git_cli import (
+    default_branch,
     ensure_repo,
+    get_remote_origin_url,
     grep,
     list_branches,
     ls_tree,
+    parse_owner_repo_from_url,
+    rev_parse,
     show_blob,
 )
 
@@ -41,6 +51,9 @@ def register_tools(app: Any) -> None:
             search_files, name="gh.search.files", description="Search files via git grep"
         )
     )
+    app.add_tool(
+        Tool.from_function(repo_resolve, name="gh.repo.resolve", description="Resolve repo info")
+    )
 
 
 def repo_branches_list(repo_path: str, prefix: str | None = None) -> BranchList:
@@ -71,3 +84,22 @@ def search_files(repo_path: str, pattern: str, paths: list[str] | None = None) -
     repo = ensure_repo(Path(repo_path))
     matches = grep(repo, pattern=pattern, paths=paths or [])
     return {"repo": str(repo.path), "pattern": pattern, "matches": matches}
+
+
+def repo_resolve(repo_path: str) -> RepoResolve:
+    repo = ensure_repo(Path(repo_path))
+    origin = get_remote_origin_url(repo)
+    owner: str | None
+    name: str | None
+    owner, name = (None, None)
+    if origin:
+        owner, name = parse_owner_repo_from_url(origin)
+    head = rev_parse(repo, "HEAD")
+    return RepoResolve(
+        repo_path=str(repo.path),
+        origin_url=origin,
+        owner=owner,
+        name=name,
+        default_branch=default_branch(repo),
+        head=head,
+    )
