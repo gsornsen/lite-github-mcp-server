@@ -76,13 +76,17 @@ def file_tree(repo_path: str, ref: str, base_path: str | None = None) -> TreeLis
     return TreeList(repo=str(repo.path), ref=ref, base_path=base_path, entries=entries)
 
 
-def file_blob(repo_path: str, blob_sha: str, max_bytes: int = 32768) -> BlobResult:
+def file_blob(repo_path: str, blob_sha: str, max_bytes: int = 32768, offset: int = 0) -> BlobResult:
     import base64
 
     repo = ensure_repo(Path(repo_path))
-    data = show_blob(repo, blob_sha=blob_sha, max_bytes=max_bytes)
+    data = show_blob(repo, blob_sha=blob_sha, max_bytes=max_bytes, offset=offset)
     return BlobResult(
-        blob_sha=blob_sha, size=len(data), content_b64=base64.b64encode(data).decode("ascii")
+        blob_sha=blob_sha,
+        size=len(data),
+        content_b64=base64.b64encode(data).decode("ascii"),
+        offset=offset,
+        fetched=len(data),
     )
 
 

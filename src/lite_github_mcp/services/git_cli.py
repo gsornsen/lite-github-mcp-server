@@ -114,9 +114,13 @@ def ls_tree(repo: GitRepo, ref: str, path: str = "") -> list[tuple[str, str]]:
     return entries
 
 
-def show_blob(repo: GitRepo, blob_sha: str, max_bytes: int | None = None) -> bytes:
+def show_blob(repo: GitRepo, blob_sha: str, max_bytes: int | None = None, offset: int = 0) -> bytes:
+    # Use `git cat-file -p` and slice client-side; for large blobs we can switch to
+    # `git cat-file --batch` later.
     result = run_command(["git", "cat-file", "-p", blob_sha], cwd=repo.path)
     data = result.stdout.encode()
+    if offset > 0:
+        data = data[offset:]
     if max_bytes is not None and len(data) > max_bytes:
         return data[:max_bytes]
     return data

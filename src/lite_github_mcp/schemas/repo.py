@@ -26,6 +26,8 @@ class BlobResult(BaseModel):
     size: int
     encoding: str = "base64"
     content_b64: str
+    offset: int = 0
+    fetched: int
 
 
 class RepoResolve(BaseModel):
