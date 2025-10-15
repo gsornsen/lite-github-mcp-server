@@ -57,7 +57,7 @@ just cli_call gh.search.files '{"repo_path": ".", "pattern": "TODO", "paths": ["
 just cli_call gh.file.blob '{"repo_path": ".", "blob_sha": "<sha>", "max_bytes": 128, "offset": 0}'
 
 # PRs (ids-first, meta, timeline)
-just cli_call gh.pr.list '{"repo": "gsornsen/home-k8s", "state": "open", "limit": 10}'
-just cli_call gh.pr.get '{"repo": "gsornsen/home-k8s", "number": 3}'
-just cli_call gh.pr.timeline '{"repo": "gsornsen/home-k8s", "number": 3, "limit": 5}'
+just cli_call gh.pr.list '{"repo": "gsornsen/lite-github-mcp-server", "state": "open", "limit": 10}'
+just cli_call gh.pr.get '{"repo": "gsornsen/lite-github-mcp-server", "number": 3}'
+just cli_call gh.pr.timeline '{"repo": "gsornsen/lite-github-mcp-server", "number": 3, "limit": 5}'
 ```
