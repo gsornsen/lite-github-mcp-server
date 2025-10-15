@@ -7,7 +7,7 @@ default: build
 
 setup:
 	uv sync --dev
-	pre-commit install --install-hooks
+	uv run pre-commit install --install-hooks
 
 fmt:
 	uv run ruff format .
@@ -33,7 +33,7 @@ build:
 	uv build
 
 precommit:
-	pre-commit run --all-files
+	uv run pre-commit run --all-files
 
 ci:
 	just fmt lint typecheck test
