@@ -113,7 +113,10 @@ def pr_get(owner: str, name: str, number: int) -> dict[str, Any]:
         "--json",
         ",".join(fields),
     ]
-    data = run_gh_json(args) or {}
+    try:
+        data = run_gh_json(args) or {}
+    except RuntimeError:
+        return {}
     meta = {
         "repo": f"{owner}/{name}",
         "number": data.get("number"),
@@ -253,7 +256,10 @@ def issue_get(owner: str, name: str, number: int) -> dict[str, Any]:
         "--json",
         "number,state,title,author,body",
     ]
-    data = run_gh_json(args) or {}
+    try:
+        data = run_gh_json(args) or {}
+    except RuntimeError:
+        return {}
     meta = {
         "repo": f"{owner}/{name}",
         "number": data.get("number"),

@@ -18,6 +18,7 @@ class PRGet(BaseModel):
     state: str | None
     title: str | None
     author: dict[str, object] | None
+    not_found: bool = False
 
 
 class PRTimeline(BaseModel):

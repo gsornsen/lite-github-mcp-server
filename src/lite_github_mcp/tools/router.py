@@ -253,6 +253,8 @@ def pr_list(
 def pr_get(repo: str, number: int) -> PRGet:
     owner, name = repo.split("/", 1)
     data = gh_pr_get(owner, name, number)
+    if not data:
+        return PRGet(repo=repo, number=number, state=None, title=None, author=None, not_found=True)
     return PRGet(**data)
 
 
@@ -303,7 +305,12 @@ def issue_list(
 
 def issue_get(repo: str, number: int) -> IssueGet:
     owner, name = repo.split("/", 1)
-    return IssueGet(**gh_issue_get(owner, name, number))
+    data = gh_issue_get(owner, name, number)
+    if not data:
+        return IssueGet(
+            repo=repo, number=number, state=None, title=None, author=None, not_found=True
+        )
+    return IssueGet(**data)
 
 
 def issue_comment(repo: str, number: int, body: str) -> CommentResult:
