@@ -68,11 +68,20 @@ def repo_branches_list(repo_path: str, prefix: str | None = None) -> BranchList:
     return BranchList(repo=str(repo.path), prefix=prefix, names=names)
 
 
-def file_tree(repo_path: str, ref: str, base_path: str | None = None) -> TreeList:
+def file_tree(
+    repo_path: str, ref: str, base_path: str | None = None, limit: int | None = None
+) -> TreeList:
     repo = ensure_repo(Path(repo_path))
+    # Basic base_path validation to avoid invalid path specs
+    if base_path:
+        p = Path(base_path)
+        if p.is_absolute() or ".." in p.parts:
+            raise ValueError("Invalid base_path")
     entries = [
         TreeEntry(path=p, blob_sha=sha) for p, sha in ls_tree(repo, ref=ref, path=base_path or "")
     ]
+    if limit is not None and limit >= 0:
+        entries = entries[:limit]
     return TreeList(repo=str(repo.path), ref=ref, base_path=base_path, entries=entries)
 
 
@@ -90,10 +99,14 @@ def file_blob(repo_path: str, blob_sha: str, max_bytes: int = 32768, offset: int
     )
 
 
-def search_files(repo_path: str, pattern: str, paths: list[str] | None = None) -> SearchResult:
+def search_files(
+    repo_path: str, pattern: str, paths: list[str] | None = None, limit: int | None = None
+) -> SearchResult:
     repo = ensure_repo(Path(repo_path))
     matches = grep(repo, pattern=pattern, paths=paths or [])
     converted = [SearchMatch(path=p, line=ln, excerpt=ex) for (p, ln, ex) in matches]
+    if limit is not None and limit >= 0:
+        converted = converted[:limit]
     return SearchResult(repo=str(repo.path), pattern=pattern, matches=converted)
 
 
