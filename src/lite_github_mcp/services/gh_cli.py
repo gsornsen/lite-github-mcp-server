@@ -42,6 +42,17 @@ def pr_list(
     cursor: str | None,
 ) -> dict[str, Any]:
     fields = ["number", "state", "author", "createdAt"]
+    # Normalize state for gh; map "any"/unknown -> "all"
+    normalized_state: str | None = None
+    if state:
+        s = state.lower()
+        if s == "any":
+            normalized_state = "all"
+        elif s in {"open", "closed", "merged", "all"}:
+            normalized_state = s
+        else:
+            normalized_state = "all"
+
     args = [
         "pr",
         "list",
@@ -52,14 +63,18 @@ def pr_list(
         "--limit",
         "100",
     ]
-    if state:
-        args += ["--state", state]
+    if normalized_state:
+        args += ["--state", normalized_state]
     if author:
         args += ["--author", author]
     if label:
         args += ["--label", label]
 
-    data = run_gh_json(args) or []
+    try:
+        data = run_gh_json(args) or []
+    except RuntimeError:
+        # Return empty list on invalid filter to avoid noisy errors
+        data = []
     items = [int(item.get("number")) for item in data if "number" in item]
     start = decode_cursor(cursor).index
     if start < 0:
@@ -70,7 +85,7 @@ def pr_list(
     next_cur = encode_cursor(end) if has_next else None
     return {
         "repo": f"{owner}/{name}",
-        "filters": {"state": state, "author": author, "label": label},
+        "filters": {"state": normalized_state or state, "author": author, "label": label},
         "ids": page,
         "count": len(page),
         "has_next": has_next,
@@ -123,7 +138,10 @@ def pr_files(
         "-H",
         "Accept: application/vnd.github+json",
     ]
-    data = run_gh_json(args) or []
+    try:
+        data = run_gh_json(args) or []
+    except RuntimeError:
+        data = []
     files = [
         {
             "path": f.get("filename"),
@@ -154,7 +172,7 @@ def pr_comment(owner: str, name: str, number: int, body: str) -> dict[str, Any]:
     args = ["pr", "comment", str(number), "--repo", f"{owner}/{name}", "--body", body]
     res = _run_gh(args)
     ok = res.returncode == 0
-    return {"ok": ok, "stderr": res.stderr.strip() or None}
+    return {"ok": ok}
 
 
 def pr_review(owner: str, name: str, number: int, event: str, body: str | None) -> dict[str, Any]:
@@ -169,7 +187,7 @@ def pr_review(owner: str, name: str, number: int, event: str, body: str | None) 
     if body:
         args += ["--body", body]
     res = _run_gh(args)
-    return {"ok": res.returncode == 0, "stderr": res.stderr.strip() or None}
+    return {"ok": res.returncode == 0}
 
 
 def pr_merge(owner: str, name: str, number: int, method: str = "merge") -> dict[str, Any]:
@@ -178,7 +196,7 @@ def pr_merge(owner: str, name: str, number: int, method: str = "merge") -> dict[
     if method in {"merge", "squash", "rebase"}:
         args += [f"--{method}"]
     res = _run_gh(args)
-    return {"ok": res.returncode == 0, "stderr": res.stderr.strip() or None}
+    return {"ok": res.returncode == 0}
 
 
 def issue_list(
