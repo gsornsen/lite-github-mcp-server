@@ -14,6 +14,11 @@ Purpose: Keep all agents (humans and LLMs) aligned on patterns, guardrails, and 
 - Technical Plan: `docs/project-docs/TECHNICAL_PLAN_OVERVIEW.md`
 - Milestones/Epics/Stories: `docs/project-docs/PROJECT_PLAN_MILESTONES_EPICS_AND_STORIES.md`
 - ADRs: `docs/adr/`
+- FastMCP Docs (latest, MDX source): https://github.com/jlowin/fastmcp/tree/main/docs
+  - Server API and patterns: https://github.com/jlowin/fastmcp/tree/main/docs/server
+  - Tools API: https://github.com/jlowin/fastmcp/tree/main/docs/tools
+  - Client usage: https://github.com/jlowin/fastmcp/tree/main/docs/client
+  - Deployment and configuration: https://github.com/jlowin/fastmcp/tree/main/docs/deployment
 
 ### Canonical JSON Shapes
 - Error:

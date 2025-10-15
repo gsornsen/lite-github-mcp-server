@@ -35,3 +35,4 @@ just compose_down
 ## Notes
 - Targets Python 3.13+; `uvloop` remains optional on Linux.
 - `gh.ping` and `gh.whoami` are available; `whoami` is a placeholder until auth wiring.
+- For FastMCP concepts and up-to-date API details, see the MDX docs: https://github.com/jlowin/fastmcp/tree/main/docs

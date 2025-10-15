@@ -18,6 +18,7 @@ Thanks for contributing to Lite GitHub MCP Server!
 - Deterministic outputs; pagination/fields enforced where relevant
 - Context budget respected (`scripts/context_budget_check.py`)
 - Docs updated (README, milestone how-tos, or examples)
+- When touching server or tooling patterns, consult FastMCP MDX docs for current APIs and guidance: https://github.com/jlowin/fastmcp/tree/main/docs
 
 ## Running tests
 - Unit tests: `just test`

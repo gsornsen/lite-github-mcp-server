@@ -9,6 +9,8 @@
 ### Executive Summary
 This document is the complete plan to build and maintain `lite-github-mcp-server`, now updated per feedback to target Python ≥ 3.13, keep `uvloop` optional on Linux, and remove the `version:` key from `docker-compose.yml`. It covers goals, constraints, architecture, detailed module plan, tooling, CI/CD, Docker, testing, documentation, milestones, risks, and concrete configs/files.
 
+Reference: We target the latest FastMCP (PyPI). For API/source-of-truth documentation, prefer the MDX docs in the upstream repository: https://github.com/jlowin/fastmcp/tree/main/docs (e.g., `server/`, `tools/`, `client/`, and `deployment/`).
+
 ### Goals and Constraints
 - **Minimize LLM context usage**: tiny tool list/descriptions, small responses, lazy expansion, pagination by default, no verbose text.
 - **CLI-first**: Prefer local `git` and `gh` CLI. Use REST/GraphQL only if `gh` lacks the feature. Wrap `gh api` for micro-queries.

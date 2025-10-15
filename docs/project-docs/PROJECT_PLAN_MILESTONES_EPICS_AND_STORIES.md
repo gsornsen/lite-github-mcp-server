@@ -12,6 +12,7 @@
 - Python 3.13+, FastMCP 2.0, Pydantic v2; `uvloop` optional (Linux)
 - Pagination, field selection, ids-first, expand-on-demand
 - CI: ruff, mypy, pytest, budgets; Docker image and Compose for demo
+- Reference: FastMCP upstream MDX docs for API details and patterns: https://github.com/jlowin/fastmcp/tree/main/docs
 
 ---
 
