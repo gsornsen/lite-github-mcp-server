@@ -27,10 +27,21 @@ def list_tools() -> None:
 async def _call_tool_async(name: str, args: dict[str, Any]) -> None:
     async with Client(server_app) as client:
         result = await client.call_tool(name, args)
-        try:
-            typer.echo(json.dumps(result, indent=2, default=str))
-        except TypeError:
-            typer.echo(json.dumps({"result": str(result)}, indent=2))
+        # Prefer structured content when available; fall back to text
+        structured = getattr(result, "structuredContent", None) or getattr(
+            result, "structured_content", None
+        )
+        if structured is not None:
+            typer.echo(json.dumps(structured, indent=2, default=str))
+            return
+        content = getattr(result, "content", None)
+        if content and isinstance(content, list) and content:
+            first = content[0]
+            text = getattr(first, "text", None) or getattr(first, "content", None)
+            if isinstance(text, str):
+                typer.echo(text)
+                return
+        typer.echo(json.dumps({"result": str(result)}, indent=2))
 
 
 @cli.command("call")
