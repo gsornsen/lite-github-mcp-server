@@ -21,7 +21,7 @@ repos:
     hooks:
       - id: pytest-testmon
         name: pytest (affected tests)
-        entry: bash -lc 'just test-changed'
+        entry: bash -lc 'just test_changed'
         language: system
         pass_filenames: false
         stages: [pre-commit]

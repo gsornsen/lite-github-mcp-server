@@ -23,7 +23,7 @@ test:
 	uv run pytest -q
 
 # Affected tests using testmon cache
-"test-changed":
+test_changed:
 	uv run pytest --testmon -q
 
 run:
@@ -45,11 +45,11 @@ whoami:
 	gh auth status || true
 
 # Docker
-"docker-build":
+docker_build:
 	docker build -t lite-github-mcp:dev -f docker/Dockerfile .
 
-"compose-up":
+compose_up:
 	docker compose up --build -d
 
-"compose-down":
+compose_down:
 	docker compose down

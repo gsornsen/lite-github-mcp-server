@@ -26,10 +26,10 @@ just fmt && just lint
 ## Docker
 
 ```bash
-just docker-build
-just compose-up
+just docker_build
+just compose_up
 # ... use it ...
-just compose-down
+just compose_down
 ```
 
 ## Notes
