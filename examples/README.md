@@ -16,6 +16,6 @@ Copyable CLI examples for testing the MCP server.
   - `just cli_call gh.file.blob '{"repo_path": ".", "blob_sha": "<sha>", "max_bytes": 128, "offset": 0}'`
 
 - PRs
-  - `just cli_call gh.pr.list '{"repo": "owner/repo", "state": "open", "limit": 10}'`
-  - `just cli_call gh.pr.get '{"repo": "owner/repo", "number": 123}'`
-  - `just cli_call gh.pr.timeline '{"repo": "owner/repo", "number": 123, "limit": 5}'`
+  - `just cli_call gh.pr.list '{"repo": "gsornsen/home-k8s", "state": "open", "limit": 10}'`
+  - `just cli_call gh.pr.get '{"repo": "gsornsen/home-k8s", "number": 3}'`
+  - `just cli_call gh.pr.timeline '{"repo": "gsornsen/home-k8s", "number": 3, "limit": 5}'`
