@@ -3,6 +3,7 @@ from typing import Any
 
 from fastmcp.tools.tool import Tool
 
+from lite_github_mcp.schemas.pr import PRGet, PRList, PRTimeline
 from lite_github_mcp.schemas.repo import (
     BlobResult,
     BranchList,
@@ -12,6 +13,15 @@ from lite_github_mcp.schemas.repo import (
     SearchResult,
     TreeEntry,
     TreeList,
+)
+from lite_github_mcp.services.gh_cli import (
+    pr_get as gh_pr_get,
+)
+from lite_github_mcp.services.gh_cli import (
+    pr_list as gh_pr_list,
+)
+from lite_github_mcp.services.gh_cli import (
+    pr_timeline as gh_pr_timeline,
 )
 from lite_github_mcp.services.git_cli import (
     default_branch,
@@ -60,6 +70,11 @@ def register_tools(app: Any) -> None:
     )
     app.add_tool(
         Tool.from_function(repo_refs_get, name="gh.repo.refs.get", description="Resolve ref to sha")
+    )
+    app.add_tool(Tool.from_function(pr_list, name="gh.pr.list", description="List PR ids"))
+    app.add_tool(Tool.from_function(pr_get, name="gh.pr.get", description="Get PR meta"))
+    app.add_tool(
+        Tool.from_function(pr_timeline, name="gh.pr.timeline", description="PR timeline events")
     )
 
 
@@ -189,3 +204,30 @@ def repo_refs_get(repo_path: str, ref: str) -> RefResolve:
     repo = ensure_repo(Path(repo_path))
     sha = rev_parse(repo, ref)
     return RefResolve(repo_path=str(repo.path), ref=ref, sha=sha)
+
+
+def pr_list(
+    repo: str,
+    state: str | None = None,
+    author: str | None = None,
+    label: str | None = None,
+    limit: int | None = None,
+    cursor: str | None = None,
+) -> PRList:
+    owner, name = repo.split("/", 1)
+    data = gh_pr_list(owner, name, state, author, label, limit, cursor)
+    return PRList(**data)
+
+
+def pr_get(repo: str, number: int) -> PRGet:
+    owner, name = repo.split("/", 1)
+    data = gh_pr_get(owner, name, number)
+    return PRGet(**data)
+
+
+def pr_timeline(
+    repo: str, number: int, limit: int | None = None, cursor: str | None = None
+) -> PRTimeline:
+    owner, name = repo.split("/", 1)
+    data = gh_pr_timeline(owner, name, number, limit, cursor)
+    return PRTimeline(**data)
