@@ -6,7 +6,10 @@ from fastmcp.tools.tool import Tool
 from lite_github_mcp.schemas.repo import (
     BlobResult,
     BranchList,
+    RefResolve,
     RepoResolve,
+    SearchMatch,
+    SearchResult,
     TreeEntry,
     TreeList,
 )
@@ -54,6 +57,9 @@ def register_tools(app: Any) -> None:
     app.add_tool(
         Tool.from_function(repo_resolve, name="gh.repo.resolve", description="Resolve repo info")
     )
+    app.add_tool(
+        Tool.from_function(repo_refs_get, name="gh.repo.refs.get", description="Resolve ref to sha")
+    )
 
 
 def repo_branches_list(repo_path: str, prefix: str | None = None) -> BranchList:
@@ -80,10 +86,11 @@ def file_blob(repo_path: str, blob_sha: str, max_bytes: int = 32768) -> BlobResu
     )
 
 
-def search_files(repo_path: str, pattern: str, paths: list[str] | None = None) -> dict[str, Any]:
+def search_files(repo_path: str, pattern: str, paths: list[str] | None = None) -> SearchResult:
     repo = ensure_repo(Path(repo_path))
     matches = grep(repo, pattern=pattern, paths=paths or [])
-    return {"repo": str(repo.path), "pattern": pattern, "matches": matches}
+    converted = [SearchMatch(path=p, line=ln, excerpt=ex) for (p, ln, ex) in matches]
+    return SearchResult(repo=str(repo.path), pattern=pattern, matches=converted)
 
 
 def repo_resolve(repo_path: str) -> RepoResolve:
@@ -103,3 +110,9 @@ def repo_resolve(repo_path: str) -> RepoResolve:
         default_branch=default_branch(repo),
         head=head,
     )
+
+
+def repo_refs_get(repo_path: str, ref: str) -> RefResolve:
+    repo = ensure_repo(Path(repo_path))
+    sha = rev_parse(repo, ref)
+    return RefResolve(repo_path=str(repo.path), ref=ref, sha=sha)

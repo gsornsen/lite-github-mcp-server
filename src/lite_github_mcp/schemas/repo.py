@@ -35,3 +35,21 @@ class RepoResolve(BaseModel):
     name: str | None
     default_branch: str | None
     head: str | None
+
+
+class RefResolve(BaseModel):
+    repo_path: str
+    ref: str
+    sha: str | None
+
+
+class SearchMatch(BaseModel):
+    path: str
+    line: int
+    excerpt: str
+
+
+class SearchResult(BaseModel):
+    repo: str
+    pattern: str
+    matches: list[SearchMatch]
