@@ -23,6 +23,7 @@ dependencies = [
 
 [project.scripts]
 lite-github-mcp = "lite_github_mcp.server:main"
+lite-github-mcp-cli = "lite_github_mcp.cli:app"
 
 [build-system]
 requires = ["hatchling>=1.25"]

@@ -30,6 +30,18 @@ run:
 	# Prefer Procfile-based orchestration for clean start/stop
 	uv run honcho start -f Procfile
 
+cli:
+	uv run lite-github-mcp-cli --help
+
+
+cli_tools:
+	uv run lite-github-mcp-cli tools
+
+
+cli_call name args:
+	# Example: just cli-call gh.ping '{}'
+	uv run lite-github-mcp-cli call {{name}} --args '{{args}}'
+
 build:
 	uv build
 
