@@ -50,6 +50,8 @@ just cli_call gh.file.tree '{"repo_path": ".", "ref": "HEAD", "limit": 3, "curso
 
 # Search (limit, cursor)
 just cli_call gh.search.files '{"repo_path": ".", "pattern": "FastMCP", "limit": 2}'
+# Restrict search to paths
+just cli_call gh.search.files '{"repo_path": ".", "pattern": "TODO", "paths": ["src/", "docs/"]}'
 
 # Blob ranges (offset, max_bytes)
 just cli_call gh.file.blob '{"repo_path": ".", "blob_sha": "<sha>", "max_bytes": 128, "offset": 0}'
