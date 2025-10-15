@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import pytest
@@ -9,9 +8,9 @@ from lite_github_mcp.tools.router import file_tree, search_files
 pytestmark = pytest.mark.integration
 
 
-@pytest.mark.skipif(not os.getenv("PUBLIC_REPO_URL"), reason="PUBLIC_REPO_URL not set")
 def test_public_repo_tree_and_search(tmp_path: Path) -> None:
-    url = os.environ["PUBLIC_REPO_URL"]
+    # Fixed small public repo for deterministic shallow clone
+    url = "https://github.com/octocat/Spoon-Knife.git"
     # Shallow clone with partial options if possible
     dest = tmp_path / "repo"
     rc = run_command(["git", "clone", "--depth", "1", url, str(dest)])
