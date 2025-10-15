@@ -55,4 +55,9 @@ just cli_call gh.search.files '{"repo_path": ".", "pattern": "TODO", "paths": ["
 
 # Blob ranges (offset, max_bytes)
 just cli_call gh.file.blob '{"repo_path": ".", "blob_sha": "<sha>", "max_bytes": 128, "offset": 0}'
+
+# PRs (ids-first, meta, timeline)
+just cli_call gh.pr.list '{"repo": "owner/repo", "state": "open", "limit": 10}'
+just cli_call gh.pr.get '{"repo": "owner/repo", "number": 123}'
+just cli_call gh.pr.timeline '{"repo": "owner/repo", "number": 123, "limit": 5}'
 ```
