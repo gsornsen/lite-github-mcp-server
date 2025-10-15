@@ -125,15 +125,48 @@ def show_blob(repo: GitRepo, blob_sha: str, max_bytes: int | None = None) -> byt
 def grep(
     repo: GitRepo, pattern: str, paths: Iterable[str] | None = None
 ) -> list[tuple[str, int, str]]:
-    args = ["git", "grep", "-n", pattern]
+    """Search for pattern in repo using ripgrep if available, else git grep.
+
+    Returns list of (path, line, excerpt).
+    """
+    # Prefer ripgrep (rg) if available for speed
+    try:
+        rg_args: list[str] = ["rg", "-n", "--no-heading", "--color", "never", pattern]
+        if paths:
+            rg_args.extend(list(paths))
+        else:
+            rg_args.append(".")
+        rg_result = run_command(rg_args, cwd=repo.path)
+        if rg_result.returncode in (0, 1):  # 0=matches, 1=no matches
+            matches: list[tuple[str, int, str]] = []
+            for line in rg_result.stdout.splitlines():
+                # rg format: file:line:col:excerpt
+                parts = line.split(":", 3)
+                if len(parts) >= 4:
+                    file_path, lineno, _col, excerpt = parts[0], parts[1], parts[2], parts[3]
+                elif len(parts) >= 3:
+                    file_path, lineno, excerpt = parts[0], parts[1], parts[2]
+                else:
+                    continue
+                try:
+                    matches.append((file_path, int(lineno), excerpt))
+                except Exception:
+                    continue
+            return matches
+        # If rg returns other error, fall back to git grep
+    except FileNotFoundError:
+        pass
+
+    # Fallback: git grep
+    gg_args = ["git", "grep", "-n", pattern]
     if paths:
-        args.extend(paths)
-    result = run_command(args, cwd=repo.path)
-    matches: list[tuple[str, int, str]] = []
-    for line in result.stdout.splitlines():
+        gg_args.extend(paths)
+    gg_result = run_command(gg_args, cwd=repo.path)
+    matches2: list[tuple[str, int, str]] = []
+    for line in gg_result.stdout.splitlines():
         try:
-            file_path, lineno, excerpt = line.split(":", 3)[0:3]
-            matches.append((file_path, int(lineno), excerpt))
+            file_path, lineno, excerpt = line.split(":", 2)
+            matches2.append((file_path, int(lineno), excerpt))
         except Exception:
             continue
-    return matches
+    return matches2
