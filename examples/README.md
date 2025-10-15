@@ -1,9 +1,16 @@
 # Examples
 
-This directory contains minimal, copyable examples of requests/responses and end-to-end flows.
+Copyable CLI examples for testing the MCP server.
 
-- PR triage flow: list IDs, then expand fields
-- File listing and blob slice
-- Search (git grep) with excerpts
+- Tools listing
+  - `just cli_tools`
 
-Examples will be updated per milestone and referenced in user docs.
+- File tree paging
+  - `just cli_call gh.file.tree '{"repo_path": ".", "ref": "HEAD", "limit": 3}'`
+  - `just cli_call gh.file.tree '{"repo_path": ".", "ref": "HEAD", "limit": 3, "cursor": "<next>"}'`
+
+- Search paging
+  - `just cli_call gh.search.files '{"repo_path": ".", "pattern": "FastMCP", "limit": 2}'`
+
+- Blob ranges
+  - `just cli_call gh.file.blob '{"repo_path": ".", "blob_sha": "<sha>", "max_bytes": 128, "offset": 0}'`

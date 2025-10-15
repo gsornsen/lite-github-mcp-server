@@ -119,6 +119,12 @@ just run
 
 # Build and run via Docker
 just docker-build && just compose-up
+
+# CLI smoke tests (paging, cursors, ranges)
+just cli_tools
+just cli_call gh.file.tree '{"repo_path": ".", "ref": "HEAD", "limit": 3}'
+just cli_call gh.search.files '{"repo_path": ".", "pattern": "FastMCP", "limit": 2}'
+just cli_call gh.file.blob '{"repo_path": ".", "blob_sha": "<sha>", "max_bytes": 128, "offset": 0}'
 ```
 
 ### Future-Proofing

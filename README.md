@@ -36,3 +36,21 @@ just compose_down
 - Targets Python 3.13+; `uvloop` remains optional on Linux.
 - `gh.ping` and `gh.whoami` are available; `whoami` is a placeholder until auth wiring.
 - For FastMCP concepts and up-to-date API details, see the MDX docs: https://github.com/jlowin/fastmcp/tree/main/docs
+
+## CLI examples (paging and ranges)
+
+```bash
+# List tools
+just cli_tools
+
+# Trees (limit, cursor)
+just cli_call gh.file.tree '{"repo_path": ".", "ref": "HEAD", "limit": 3}'
+# Use the returned next_cursor to fetch next page
+just cli_call gh.file.tree '{"repo_path": ".", "ref": "HEAD", "limit": 3, "cursor": "<next>"}'
+
+# Search (limit, cursor)
+just cli_call gh.search.files '{"repo_path": ".", "pattern": "FastMCP", "limit": 2}'
+
+# Blob ranges (offset, max_bytes)
+just cli_call gh.file.blob '{"repo_path": ".", "blob_sha": "<sha>", "max_bytes": 128, "offset": 0}'
+```

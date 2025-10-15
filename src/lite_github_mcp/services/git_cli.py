@@ -161,10 +161,12 @@ def grep(
     except FileNotFoundError:
         pass
 
-    # Fallback: git grep
-    gg_args = ["git", "grep", "-n", pattern]
+    # Fallback: git grep (support working tree via --no-index)
+    gg_args = ["git", "grep", "--no-index", "-n", pattern]
     if paths:
         gg_args.extend(paths)
+    else:
+        gg_args.append(".")
     gg_result = run_command(gg_args, cwd=repo.path)
     matches2: list[tuple[str, int, str]] = []
     for line in gg_result.stdout.splitlines():
@@ -173,4 +175,5 @@ def grep(
             matches2.append((file_path, int(lineno), excerpt))
         except Exception:
             continue
+    matches2.sort(key=lambda t: (t[0], t[1]))
     return matches2
