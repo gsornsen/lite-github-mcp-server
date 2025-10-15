@@ -19,3 +19,12 @@ Copyable CLI examples for testing the MCP server.
   - `just cli_call gh.pr.list '{"repo": "gsornsen/home-k8s", "state": "open", "limit": 10}'`
   - `just cli_call gh.pr.get '{"repo": "gsornsen/home-k8s", "number": 3}'`
   - `just cli_call gh.pr.timeline '{"repo": "gsornsen/home-k8s", "number": 3, "limit": 5}'`
+  - `just cli_call gh.pr.files '{"repo": "gsornsen/home-k8s", "number": 3, "limit": 10}'`
+  - `just cli_call gh.pr.comment '{"repo": "gsornsen/home-k8s", "number": 3, "body": "Thanks!"}'`
+  - `just cli_call gh.pr.review '{"repo": "gsornsen/home-k8s", "number": 3, "event": "approve", "body": "LGTM"}'`
+  - `just cli_call gh.pr.merge '{"repo": "gsornsen/home-k8s", "number": 3, "method": "squash"}'`
+
+- Issues
+  - `just cli_call gh.issue.list '{"repo": "gsornsen/home-k8s", "state": "open", "limit": 10}'`
+  - `just cli_call gh.issue.get '{"repo": "gsornsen/home-k8s", "number": 3}'`
+  - `just cli_call gh.issue.comment '{"repo": "gsornsen/home-k8s", "number": 3, "body": "Following up"}'`
