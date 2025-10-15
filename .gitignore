@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+.uv/
+uv.lock
+.pytest_cache/
+.coverage*
+.cache/
+.testmondata
+*.egg-info/
+.eggs/
+.DS_Store
+.env

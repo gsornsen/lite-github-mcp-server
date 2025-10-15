@@ -1,0 +1,55 @@
+set shell := ["bash", "-lc"]
+
+PY := "uv run"
+
+# Bootstrap
+default: build
+
+setup:
+	uv sync --dev
+	pre-commit install --install-hooks
+
+fmt:
+	uv run ruff format .
+	uv run ruff check --fix .
+
+lint:
+	uv run ruff check .
+
+typecheck:
+	uv run mypy src tests
+
+test:
+	uv run pytest -q
+
+# Affected tests using testmon cache
+"test-changed":
+	uv run pytest --testmon -q
+
+run:
+	uv run python -m lite_github_mcp.server
+
+build:
+	uv build
+
+precommit:
+	pre-commit run --all-files
+
+ci:
+	just fmt lint typecheck test
+
+release:
+	uv run cz bump --changelog
+
+whoami:
+	gh auth status || true
+
+# Docker
+"docker-build":
+	docker build -t lite-github-mcp:dev -f docker/Dockerfile .
+
+"compose-up":
+	docker compose up --build -d
+
+"compose-down":
+	docker compose down

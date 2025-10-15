@@ -1,0 +1,39 @@
+name: release
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  semantic-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: astral-sh/setup-uv@v3
+      - name: Install commitizen
+        run: uv pip install commitizen
+      - name: Bump version and changelog if needed
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cz bump --changelog --yes || echo "No version bump"
+      - name: Push tags
+        if: success()
+        run: |
+          git push --follow-tags origin HEAD:main
+      - name: Create GitHub Release
+        if: success()
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 || true)
+          if [ -n "$LATEST_TAG" ]; then \
+            gh release create "$LATEST_TAG" -F CHANGELOG.md -t "$LATEST_TAG" --latest || true; \
+          fi

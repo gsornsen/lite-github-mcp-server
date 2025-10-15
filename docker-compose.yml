@@ -1,0 +1,13 @@
+services:
+  mcp:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: lite-github-mcp:dev
+    environment:
+      - GH_TOKEN=${GH_TOKEN}
+      - GITHUB_HOST=${GITHUB_HOST:-github.com}
+    volumes:
+      - ./:/app
+    tty: true
+    stdin_open: true
