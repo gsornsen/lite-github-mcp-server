@@ -19,6 +19,7 @@ dependencies = [
   "fastmcp>=2.0.0",
   "pydantic>=2.7",
   "typer>=0.12",
+  "rapidfuzz>=3.9",
   # "uvloop>=0.20; platform_system == 'Linux'",
 ]
 
