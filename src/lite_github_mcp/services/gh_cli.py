@@ -104,13 +104,23 @@ def pr_timeline(
     # Use REST timeline for broad compatibility
     args = [
         "api",
-        f"repos/{owner}/{name}/issues/{number}/timeline",
+        f"repos/{owner}/{name}/issues/{number}/timeline?per_page=100",
         "-H",
         "Accept: application/vnd.github+json",
-        "-F",
-        "per_page=100",
+        "-H",
+        "Accept: application/vnd.github.mockingbird-preview+json",
     ]
-    data = run_gh_json(args) or []
+    try:
+        data = run_gh_json(args) or []
+    except RuntimeError:
+        # Fallback to issue events if timeline preview not available
+        events_args = [
+            "api",
+            f"repos/{owner}/{name}/issues/{number}/events?per_page=100",
+            "-H",
+            "Accept: application/vnd.github+json",
+        ]
+        data = run_gh_json(events_args) or []
     events: list[dict[str, Any]] = []
     for n in data:
         events.append(
