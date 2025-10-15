@@ -62,6 +62,18 @@ markers = [
   "integration: marks tests that hit network or public repos (skipped by default)",
 ]
 
+[tool.coverage.run]
+omit = [
+  "src/lite_github_mcp/cli.py",
+  "src/lite_github_mcp/server.py",
+]
+
+[tool.coverage.report]
+omit = [
+  "src/lite_github_mcp/cli.py",
+  "src/lite_github_mcp/server.py",
+]
+
 [tool.ruff]
 line-length = 100
 target-version = "py313"
