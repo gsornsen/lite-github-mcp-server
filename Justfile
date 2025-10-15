@@ -27,7 +27,8 @@ test_changed:
 	uv run pytest --testmon -q
 
 run:
-	uv run python -m lite_github_mcp.server
+	# Prefer Procfile-based orchestration for clean start/stop
+	uv run honcho start -f Procfile
 
 build:
 	uv build
