@@ -15,10 +15,11 @@ classifiers = [
 
 # Runtime dependencies
 # Note: uvloop is optional and only used on Linux
-# Uncomment to include explicitly in deps if desired
-# dependencies = [
-#   "uvloop>=0.20; platform_system == 'Linux'",
-# ]
+dependencies = [
+  "fastmcp>=2.0.0",
+  "pydantic>=2.7",
+  # "uvloop>=0.20; platform_system == 'Linux'",
+]
 
 [project.scripts]
 lite-github-mcp = "lite_github_mcp.server:main"
@@ -58,6 +59,8 @@ pythonpath = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py313"
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N", "Q", "W"]
 ignore = ["E203"]
 

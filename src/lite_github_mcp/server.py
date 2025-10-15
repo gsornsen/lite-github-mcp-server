@@ -1,8 +1,8 @@
-from fastmcp import FastMCP
+from fastmcp.server.server import FastMCP
+
 from lite_github_mcp.tools.router import register_tools
 
-
-app = FastMCP(server_name="lite-github-mcp", server_version="0.1.0")
+app = FastMCP(name="lite-github-mcp", version="0.1.0")
 
 
 def main() -> None:
