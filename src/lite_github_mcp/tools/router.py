@@ -3,6 +3,7 @@ from typing import Any
 
 from fastmcp.tools.tool import Tool
 
+from lite_github_mcp.schemas.issue import CommentResult, IssueGet, IssueList
 from lite_github_mcp.schemas.pr import PRGet, PRList, PRTimeline
 from lite_github_mcp.schemas.repo import (
     BlobResult,
@@ -15,10 +16,31 @@ from lite_github_mcp.schemas.repo import (
     TreeList,
 )
 from lite_github_mcp.services.gh_cli import (
+    issue_comment as gh_issue_comment,
+)
+from lite_github_mcp.services.gh_cli import (
+    issue_get as gh_issue_get,
+)
+from lite_github_mcp.services.gh_cli import (
+    issue_list as gh_issue_list,
+)
+from lite_github_mcp.services.gh_cli import (
+    pr_comment as gh_pr_comment,
+)
+from lite_github_mcp.services.gh_cli import (
+    pr_files as gh_pr_files,
+)
+from lite_github_mcp.services.gh_cli import (
     pr_get as gh_pr_get,
 )
 from lite_github_mcp.services.gh_cli import (
     pr_list as gh_pr_list,
+)
+from lite_github_mcp.services.gh_cli import (
+    pr_merge as gh_pr_merge,
+)
+from lite_github_mcp.services.gh_cli import (
+    pr_review as gh_pr_review,
 )
 from lite_github_mcp.services.gh_cli import (
     pr_timeline as gh_pr_timeline,
@@ -75,6 +97,15 @@ def register_tools(app: Any) -> None:
     app.add_tool(Tool.from_function(pr_get, name="gh.pr.get", description="Get PR meta"))
     app.add_tool(
         Tool.from_function(pr_timeline, name="gh.pr.timeline", description="PR timeline events")
+    )
+    app.add_tool(Tool.from_function(pr_files, name="gh.pr.files", description="PR changed files"))
+    app.add_tool(Tool.from_function(pr_comment, name="gh.pr.comment", description="Comment on PR"))
+    app.add_tool(Tool.from_function(pr_review, name="gh.pr.review", description="Review PR"))
+    app.add_tool(Tool.from_function(pr_merge, name="gh.pr.merge", description="Merge PR"))
+    app.add_tool(Tool.from_function(issue_list, name="gh.issue.list", description="List issues"))
+    app.add_tool(Tool.from_function(issue_get, name="gh.issue.get", description="Get issue"))
+    app.add_tool(
+        Tool.from_function(issue_comment, name="gh.issue.comment", description="Comment on issue")
     )
 
 
@@ -231,3 +262,51 @@ def pr_timeline(
     owner, name = repo.split("/", 1)
     data = gh_pr_timeline(owner, name, number, limit, cursor)
     return PRTimeline(**data)
+
+
+def pr_files(
+    repo: str, number: int, limit: int | None = None, cursor: str | None = None
+) -> dict[str, Any]:
+    owner, name = repo.split("/", 1)
+    return gh_pr_files(owner, name, number, limit, cursor)
+
+
+def pr_comment(repo: str, number: int, body: str) -> CommentResult:
+    owner, name = repo.split("/", 1)
+    data = gh_pr_comment(owner, name, number, body)
+    return CommentResult(ok=bool(data.get("ok")), url=None)
+
+
+def pr_review(repo: str, number: int, event: str, body: str | None = None) -> CommentResult:
+    owner, name = repo.split("/", 1)
+    data = gh_pr_review(owner, name, number, event, body)
+    return CommentResult(ok=bool(data.get("ok")), url=None)
+
+
+def pr_merge(repo: str, number: int, method: str = "merge") -> CommentResult:
+    owner, name = repo.split("/", 1)
+    data = gh_pr_merge(owner, name, number, method)
+    return CommentResult(ok=bool(data.get("ok")), url=None)
+
+
+def issue_list(
+    repo: str,
+    state: str | None = None,
+    author: str | None = None,
+    label: str | None = None,
+    limit: int | None = None,
+    cursor: str | None = None,
+) -> IssueList:
+    owner, name = repo.split("/", 1)
+    return IssueList(**gh_issue_list(owner, name, state, author, label, limit, cursor))
+
+
+def issue_get(repo: str, number: int) -> IssueGet:
+    owner, name = repo.split("/", 1)
+    return IssueGet(**gh_issue_get(owner, name, number))
+
+
+def issue_comment(repo: str, number: int, body: str) -> CommentResult:
+    owner, name = repo.split("/", 1)
+    data = gh_issue_comment(owner, name, number, body)
+    return CommentResult(ok=bool(data.get("ok")), url=None)
