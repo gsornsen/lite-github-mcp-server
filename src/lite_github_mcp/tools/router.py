@@ -24,6 +24,7 @@ from lite_github_mcp.services.git_cli import (
     rev_parse,
     show_blob,
 )
+from lite_github_mcp.services.pager import decode_cursor, encode_cursor
 
 
 def ping() -> dict[str, Any]:
@@ -62,14 +63,34 @@ def register_tools(app: Any) -> None:
     )
 
 
-def repo_branches_list(repo_path: str, prefix: str | None = None) -> BranchList:
+def repo_branches_list(
+    repo_path: str, prefix: str | None = None, limit: int | None = None, cursor: str | None = None
+) -> BranchList:
     repo = ensure_repo(Path(repo_path))
     names = list_branches(repo, prefix=prefix)
-    return BranchList(repo=str(repo.path), prefix=prefix, names=names)
+    start = decode_cursor(cursor).index
+    if start < 0:
+        start = 0
+    end = start + (limit or len(names))
+    page = names[start:end]
+    has_next = end < len(names)
+    next_cur = encode_cursor(end) if has_next else None
+    return BranchList(
+        repo=str(repo.path),
+        prefix=prefix,
+        names=page,
+        count=len(page),
+        has_next=has_next,
+        next_cursor=next_cur,
+    )
 
 
 def file_tree(
-    repo_path: str, ref: str, base_path: str | None = None, limit: int | None = None
+    repo_path: str,
+    ref: str,
+    base_path: str | None = None,
+    limit: int | None = None,
+    cursor: str | None = None,
 ) -> TreeList:
     repo = ensure_repo(Path(repo_path))
     # Basic base_path validation to avoid invalid path specs
@@ -77,12 +98,25 @@ def file_tree(
         p = Path(base_path)
         if p.is_absolute() or ".." in p.parts:
             raise ValueError("Invalid base_path")
-    entries = [
+    all_entries = [
         TreeEntry(path=p, blob_sha=sha) for p, sha in ls_tree(repo, ref=ref, path=base_path or "")
     ]
-    if limit is not None and limit >= 0:
-        entries = entries[:limit]
-    return TreeList(repo=str(repo.path), ref=ref, base_path=base_path, entries=entries)
+    start = decode_cursor(cursor).index
+    if start < 0:
+        start = 0
+    end = start + (limit or len(all_entries))
+    page = all_entries[start:end]
+    has_next = end < len(all_entries)
+    next_cur = encode_cursor(end) if has_next else None
+    return TreeList(
+        repo=str(repo.path),
+        ref=ref,
+        base_path=base_path,
+        entries=page,
+        count=len(page),
+        has_next=has_next,
+        next_cursor=next_cur,
+    )
 
 
 def file_blob(repo_path: str, blob_sha: str, max_bytes: int = 32768, offset: int = 0) -> BlobResult:
@@ -90,24 +124,46 @@ def file_blob(repo_path: str, blob_sha: str, max_bytes: int = 32768, offset: int
 
     repo = ensure_repo(Path(repo_path))
     data = show_blob(repo, blob_sha=blob_sha, max_bytes=max_bytes, offset=offset)
+    total = len(show_blob(repo, blob_sha=blob_sha))
+    next_off = offset + len(data)
+    has_next = next_off < total
     return BlobResult(
         blob_sha=blob_sha,
         size=len(data),
         content_b64=base64.b64encode(data).decode("ascii"),
         offset=offset,
         fetched=len(data),
+        total_size=total,
+        has_next=has_next,
+        next_offset=next_off if has_next else None,
     )
 
 
 def search_files(
-    repo_path: str, pattern: str, paths: list[str] | None = None, limit: int | None = None
+    repo_path: str,
+    pattern: str,
+    paths: list[str] | None = None,
+    limit: int | None = None,
+    cursor: str | None = None,
 ) -> SearchResult:
     repo = ensure_repo(Path(repo_path))
     matches = grep(repo, pattern=pattern, paths=paths or [])
     converted = [SearchMatch(path=p, line=ln, excerpt=ex) for (p, ln, ex) in matches]
-    if limit is not None and limit >= 0:
-        converted = converted[:limit]
-    return SearchResult(repo=str(repo.path), pattern=pattern, matches=converted)
+    start = decode_cursor(cursor).index
+    if start < 0:
+        start = 0
+    end = start + (limit or len(converted))
+    page = converted[start:end]
+    has_next = end < len(converted)
+    next_cur = encode_cursor(end) if has_next else None
+    return SearchResult(
+        repo=str(repo.path),
+        pattern=pattern,
+        matches=page,
+        count=len(page),
+        has_next=has_next,
+        next_cursor=next_cur,
+    )
 
 
 def repo_resolve(repo_path: str) -> RepoResolve:

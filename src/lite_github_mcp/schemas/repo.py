@@ -7,6 +7,9 @@ class BranchList(BaseModel):
     repo: str
     prefix: str | None = None
     names: list[str]
+    count: int
+    has_next: bool = False
+    next_cursor: str | None = None
 
 
 class TreeEntry(BaseModel):
@@ -19,15 +22,21 @@ class TreeList(BaseModel):
     ref: str
     base_path: str | None = None
     entries: list[TreeEntry]
+    count: int
+    has_next: bool = False
+    next_cursor: str | None = None
 
 
 class BlobResult(BaseModel):
     blob_sha: str
-    size: int
+    size: int  # number of bytes returned (fetched)
     encoding: str = "base64"
     content_b64: str
     offset: int = 0
     fetched: int
+    total_size: int
+    has_next: bool = False
+    next_offset: int | None = None
 
 
 class RepoResolve(BaseModel):
@@ -55,3 +64,6 @@ class SearchResult(BaseModel):
     repo: str
     pattern: str
     matches: list[SearchMatch]
+    count: int
+    has_next: bool = False
+    next_cursor: str | None = None
