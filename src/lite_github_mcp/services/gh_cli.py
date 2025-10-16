@@ -309,6 +309,35 @@ def issue_comment(owner: str, name: str, number: int, body: str) -> dict[str, An
     return {"ok": res.returncode == 0, "stderr": res.stderr.strip() or None}
 
 
+def repo_ref_get_remote(owner: str, name: str, ref: str) -> dict[str, Any]:
+    # Resolve arbitrary ref for a remote repo via gh api/git ref resolution
+    # Try git ref endpoint: /repos/{owner}/{repo}/git/ref/{ref}
+    # ref can be heads/main or tags/v1.0 etc. For shorthand, try as heads/ first.
+    candidates = [ref]
+    if not ref.startswith("heads/") and not ref.startswith("tags/") and ref not in {"HEAD"}:
+        candidates = [f"heads/{ref}", f"tags/{ref}", ref]
+    for c in candidates:
+        try:
+            data = run_gh_json(["api", f"repos/{owner}/{name}/git/ref/{c}"])
+            if isinstance(data, dict):
+                obj = data.get("object") or {}
+                return {"ref": ref, "sha": obj.get("sha")}
+        except RuntimeError:
+            continue
+    # Fallback: try branches endpoint for HEAD-like resolution
+    try:
+        if ref in {"HEAD", "head", "default"}:
+            repo_meta = run_gh_json(["api", f"repos/{owner}/{name}"]) or {}
+            default_branch = repo_meta.get("default_branch")
+            if default_branch:
+                br = run_gh_json(["api", f"repos/{owner}/{name}/branches/{default_branch}"]) or {}
+                commit = br.get("commit") or {}
+                return {"ref": ref, "sha": (commit.get("sha"))}
+    except RuntimeError:
+        pass
+    return {"ref": ref, "sha": None}
+
+
 def pr_timeline(
     owner: str, name: str, number: int, limit: int | None, cursor: str | None
 ) -> dict[str, Any]:

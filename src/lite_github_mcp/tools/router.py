@@ -45,6 +45,7 @@ from lite_github_mcp.services.gh_cli import (
 from lite_github_mcp.services.gh_cli import (
     pr_timeline as gh_pr_timeline,
 )
+from lite_github_mcp.services.gh_cli import repo_ref_get_remote
 from lite_github_mcp.services.git_cli import (
     default_branch,
     ensure_repo,
@@ -252,10 +253,20 @@ def repo_resolve(repo_path: str) -> RepoResolve:
     )
 
 
-def repo_refs_get(repo_path: str, ref: str) -> RefResolve:
-    repo = ensure_repo(Path(repo_path))
-    sha = rev_parse(repo, ref)
-    return RefResolve(repo_path=str(repo.path), ref=ref, sha=sha)
+def repo_refs_get(
+    repo_path: str | None = None, ref: str = "HEAD", repo: str | None = None
+) -> RefResolve:
+    # Input shape: either local repo_path or owner/name repo, but not both
+    if (repo_path and repo) or (not repo_path and not repo):
+        raise ValueError("Specify exactly one of repo_path or repo")
+    if repo is not None:
+        owner, name = repo.split("/", 1)
+        remote = repo_ref_get_remote(owner, name, ref)
+        return RefResolve(repo_path=repo, ref=ref, sha=remote.get("sha"))
+    assert repo_path is not None
+    repo_obj = ensure_repo(Path(repo_path))
+    sha = rev_parse(repo_obj, ref)
+    return RefResolve(repo_path=str(repo_obj.path), ref=ref, sha=sha)
 
 
 def pr_list(
