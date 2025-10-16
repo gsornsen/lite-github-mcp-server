@@ -28,3 +28,4 @@ class PRTimeline(BaseModel):
     count: int
     has_next: bool = False
     next_cursor: str | None = None
+    not_found: bool = False

@@ -15,7 +15,21 @@ def gh_installed() -> bool:
 
 def gh_auth_status() -> dict[str, Any]:
     res = run_command(["gh", "auth", "status"])
-    return {"ok": res.returncode == 0, "stderr": res.stderr.strip()}
+    ok = res.returncode == 0
+    # Try to get user and scopes when authed; host is inferred from env or gh config
+    user = None
+    scopes: list[str] = []
+    host = None
+    if ok:
+        # gh api to check current user and token scopes (best-effort)
+        try:
+            me = run_gh_json(["api", "user"])
+            if me and isinstance(me, dict):
+                user = {"login": me.get("login"), "name": me.get("name")}
+        except Exception:
+            user = None
+        # scopes are not directly exposed; leave empty unless GH_TOKEN env exposes it elsewhere
+    return {"ok": ok, "user": user, "scopes": scopes, "host": host}
 
 
 def _run_gh(args: list[str]) -> CommandResult:
@@ -289,6 +303,7 @@ def pr_timeline(
         "-H",
         "Accept: application/vnd.github.mockingbird-preview+json",
     ]
+    not_found = False
     try:
         data = run_gh_json(args) or []
     except RuntimeError:
@@ -299,7 +314,12 @@ def pr_timeline(
             "-H",
             "Accept: application/vnd.github+json",
         ]
-        data = run_gh_json(events_args) or []
+        try:
+            data = run_gh_json(events_args) or []
+        except RuntimeError:
+            # Treat missing issue/PR as not_found
+            data = []
+            not_found = True
     events: list[dict[str, Any]] = []
     for n in data:
         events.append(
@@ -323,4 +343,5 @@ def pr_timeline(
         "count": len(page),
         "has_next": has_next,
         "next_cursor": next_cur,
+        "not_found": not_found,
     }

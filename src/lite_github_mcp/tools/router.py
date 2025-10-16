@@ -64,8 +64,16 @@ def ping() -> dict[str, Any]:
 
 
 def whoami() -> dict[str, Any]:
-    # Placeholder; real impl will shell out to `gh auth status --show-token-scopes`
-    return {"ok": True, "user": None, "scopes": []}
+    from lite_github_mcp.services.gh_cli import gh_auth_status
+
+    status = gh_auth_status()
+    return {
+        "ok": True,
+        "authed": bool(status.get("ok")),
+        "user": status.get("user"),
+        "scopes": status.get("scopes") or [],
+        "host": status.get("host"),
+    }
 
 
 def register_tools(app: Any) -> None:
@@ -144,6 +152,9 @@ def file_tree(
         p = Path(base_path)
         if p.is_absolute() or ".." in p.parts:
             raise ValueError("Invalid base_path")
+    # Enforce limit semantics
+    if limit is not None and limit < 1:
+        raise ValueError("Invalid limit: must be >= 1")
     all_entries = [
         TreeEntry(path=p, blob_sha=sha) for p, sha in ls_tree(repo, ref=ref, path=base_path or "")
     ]
