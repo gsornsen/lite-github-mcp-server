@@ -14,6 +14,14 @@ def gh_installed() -> bool:
 
 
 def gh_auth_status() -> dict[str, Any]:
+    # First check if gh is installed
+    try:
+        ver = run_command(["gh", "--version"])
+    except Exception:
+        ver = CommandResult(args=("gh", "--version"), returncode=127, stdout="", stderr="")
+    if ver.returncode != 0:
+        return {"ok": False, "error": "gh CLI not installed", "code": "GH_NOT_INSTALLED"}
+
     res = run_command(["gh", "auth", "status"])
     ok = res.returncode == 0
     # Try to get user and scopes when authed; host is inferred from env or gh config
@@ -29,7 +37,15 @@ def gh_auth_status() -> dict[str, Any]:
         except Exception:
             user = None
         # scopes are not directly exposed; leave empty unless GH_TOKEN env exposes it elsewhere
-    return {"ok": ok, "user": user, "scopes": scopes, "host": host}
+    payload: dict[str, Any] = {"ok": ok, "user": user, "scopes": scopes, "host": host}
+    if not ok:
+        payload.update(
+            {
+                "error": (res.stderr.strip() or "gh not authenticated"),
+                "code": "GH_NOT_AUTHED",
+            }
+        )
+    return payload
 
 
 def _run_gh(args: list[str]) -> CommandResult:
@@ -39,7 +55,9 @@ def _run_gh(args: list[str]) -> CommandResult:
 def run_gh_json(args: list[str]) -> Any:
     res = _run_gh(args)
     if res.returncode != 0:
-        raise RuntimeError(f"gh failed: {' '.join(args)}\n{res.stderr}")
+        # Normalize gh errors into a standard exception with minimal message
+        msg = res.stderr.strip() or "gh error"
+        raise RuntimeError(msg)
     text = res.stdout.strip()
     if not text:
         return None

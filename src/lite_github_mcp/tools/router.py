@@ -67,9 +67,15 @@ def whoami() -> dict[str, Any]:
     from lite_github_mcp.services.gh_cli import gh_auth_status
 
     status = gh_auth_status()
+    if not status.get("ok"):
+        return {
+            "ok": False,
+            "code": status.get("code") or "GH_ERROR",
+            "error": status.get("error") or "gh error",
+        }
     return {
         "ok": True,
-        "authed": bool(status.get("ok")),
+        "authed": True,
         "user": status.get("user"),
         "scopes": status.get("scopes") or [],
         "host": status.get("host"),

@@ -55,5 +55,5 @@ def test_whoami_unauth(monkeypatch: Any) -> None:
 
     monkeypatch.setattr(gh_cli, "run_command", fake_run_command)
     out = router.whoami()
-    assert out["authed"] is False
-    assert out["user"] is None
+    assert out["ok"] is False
+    assert out.get("code") in {"GH_NOT_INSTALLED", "GH_NOT_AUTHED"}
