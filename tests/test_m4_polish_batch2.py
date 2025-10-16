@@ -12,6 +12,9 @@ def test_search_empty_pattern_validation(tmp_path: Any) -> None:
     # Validates before IO
     with pytest.raises(ValueError):
         router.search_files(repo_path=str(tmp_path), pattern="")
+    # invalid regex should be safe (0 matches) not crash
+    data = router.search_files(repo_path=str(tmp_path), pattern="(")
+    assert data.count == 0
 
 
 def test_blob_invalid_sha_not_found(tmp_path: Any) -> None:
