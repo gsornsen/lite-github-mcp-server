@@ -182,6 +182,7 @@ def file_blob(repo_path: str, blob_sha: str, max_bytes: int = 32768, offset: int
     repo = ensure_repo(Path(repo_path))
     data = show_blob(repo, blob_sha=blob_sha, max_bytes=max_bytes, offset=offset)
     total = len(show_blob(repo, blob_sha=blob_sha))
+    not_found = total == 0 and len(data) == 0
     next_off = offset + len(data)
     has_next = next_off < total
     return BlobResult(
@@ -193,6 +194,7 @@ def file_blob(repo_path: str, blob_sha: str, max_bytes: int = 32768, offset: int
         total_size=total,
         has_next=has_next,
         next_offset=next_off if has_next else None,
+        not_found=not_found,
     )
 
 
@@ -204,6 +206,8 @@ def search_files(
     cursor: str | None = None,
 ) -> SearchResult:
     repo = ensure_repo(Path(repo_path))
+    if not pattern:
+        raise ValueError("Invalid pattern: must be non-empty")
     matches = grep(repo, pattern=pattern, paths=paths or [])
     converted = [SearchMatch(path=p, line=ln, excerpt=ex) for (p, ln, ex) in matches]
     start = decode_cursor(cursor).index
