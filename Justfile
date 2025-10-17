@@ -22,6 +22,9 @@ typecheck:
 test:
 	uv run pytest -q
 
+test_context:
+	uv run pytest -q -m context_budget
+
 # Affected tests using testmon cache
 test_changed:
 	uv run pytest --testmon -q

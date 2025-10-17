@@ -61,6 +61,7 @@ addopts = "-q --strict-markers"
 pythonpath = ["src"]
 markers = [
   "integration: marks tests that hit network or public repos (skipped by default)",
+  "context_budget: measures live registry size/tokens (skipped by default)",
 ]
 
 [tool.coverage.run]
