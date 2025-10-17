@@ -12,6 +12,17 @@ def test_refs_get_empty(tmp_path: Path) -> None:
     assert r.sha is None or isinstance(r.sha, str)
 
 
+def test_repo_refs_requires_one_selector(tmp_path: Path) -> None:
+    from pytest import raises
+
+    with raises(ValueError):
+        # neither selector provided (call with only ref via kwargs)
+        repo_refs_get(ref="HEAD")
+    with raises(ValueError):
+        # both selectors provided
+        repo_refs_get(str(tmp_path), "HEAD", repo="o/n")
+
+
 def test_search_no_matches(tmp_path: Path) -> None:
     repo = ensure_repo(tmp_path / "repo")
     res = search_files(str(repo.path), pattern="foobar")
