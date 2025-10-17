@@ -3,7 +3,7 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 
-class PRList(BaseModel):
+class IssueList(BaseModel):
     repo: str
     filters: dict[str, str | None]
     ids: list[int]
@@ -12,7 +12,7 @@ class PRList(BaseModel):
     next_cursor: str | None = None
 
 
-class PRGet(BaseModel):
+class IssueGet(BaseModel):
     repo: str
     number: int | None
     state: str | None
@@ -21,11 +21,6 @@ class PRGet(BaseModel):
     not_found: bool = False
 
 
-class PRTimeline(BaseModel):
-    repo: str
-    number: int
-    events: list[dict[str, object]]
-    count: int
-    has_next: bool = False
-    next_cursor: str | None = None
-    not_found: bool = False
+class CommentResult(BaseModel):
+    ok: bool
+    url: str | None = None

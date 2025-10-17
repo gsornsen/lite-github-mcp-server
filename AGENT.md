@@ -126,9 +126,9 @@ just cli_call gh.file.tree '{"repo_path": ".", "ref": "HEAD", "limit": 3}'
 just cli_call gh.search.files '{"repo_path": ".", "pattern": "FastMCP", "limit": 2}'
 just cli_call gh.search.files '{"repo_path": ".", "pattern": "TODO", "paths": ["src/", "docs/"]}'
 just cli_call gh.file.blob '{"repo_path": ".", "blob_sha": "<sha>", "max_bytes": 128, "offset": 0}'
-just cli_call gh.pr.list '{"repo": "owner/repo", "state": "open", "limit": 10}'
-just cli_call gh.pr.get '{"repo": "owner/repo", "number": 123}'
-just cli_call gh.pr.timeline '{"repo": "owner/repo", "number": 123, "limit": 5}'
+just cli_call gh.pr.list '{"repo": "gsornsen/lite-github-mcp-server", "state": "open", "limit": 10}'
+just cli_call gh.pr.get '{"repo": "gsornsen/lite-github-mcp-server", "number": 3}'
+just cli_call gh.pr.timeline '{"repo": "gsornsen/lite-github-mcp-server", "number": 3, "limit": 5}'
 ```
 
 ### Future-Proofing

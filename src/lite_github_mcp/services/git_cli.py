@@ -95,20 +95,25 @@ def list_branches(repo: GitRepo, prefix: str | None = None) -> list[str]:
 
 
 def ls_tree(repo: GitRepo, ref: str, path: str = "") -> list[tuple[str, str]]:
-    args = ["git", "ls-tree", "-r", "--full-tree", ref]
+    # Use NUL-delimited format to safely handle spaces/unicode
+    args = ["git", "ls-tree", "-r", "--full-tree", "--name-only", "-z", ref]
     if path:
         args.append(path)
     result = run_command(args, cwd=repo.path)
     if result.returncode != 0:
         return []
+    names = [n for n in result.stdout.split("\x00") if n]
     entries: list[tuple[str, str]] = []
-    for line in result.stdout.splitlines():
-        # format: "<mode> <type> <object>\t<file>"
+    # Resolve blob sha for each path (slower, but correct; can be optimized later)
+    for name in names:
+        sha_res = run_command(["git", "ls-tree", ref, name], cwd=repo.path)
+        if sha_res.returncode != 0:
+            continue
         try:
-            meta, filename = line.split("\t", 1)
+            meta, _filename = sha_res.stdout.split("\t", 1)
             _mode, _type, object_id = meta.split()
-            entries.append((filename, object_id))
-        except ValueError:
+            entries.append((name, object_id))
+        except Exception:
             continue
     entries.sort(key=lambda x: x[0])
     return entries
@@ -118,6 +123,9 @@ def show_blob(repo: GitRepo, blob_sha: str, max_bytes: int | None = None, offset
     # Use `git cat-file -p` and slice client-side; for large blobs we can switch to
     # `git cat-file --batch` later.
     result = run_command(["git", "cat-file", "-p", blob_sha], cwd=repo.path)
+    # If invalid sha, return empty bytes
+    if result.returncode != 0:
+        return b""
     data = result.stdout.encode()
     if offset > 0:
         data = data[offset:]

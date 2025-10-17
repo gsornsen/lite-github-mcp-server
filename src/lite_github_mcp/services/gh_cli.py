@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from lite_github_mcp.services.analytics import compute_tags
 from lite_github_mcp.services.pager import decode_cursor, encode_cursor
 from lite_github_mcp.utils.subprocess import CommandResult, run_command
 
@@ -13,8 +14,38 @@ def gh_installed() -> bool:
 
 
 def gh_auth_status() -> dict[str, Any]:
+    # First check if gh is installed
+    try:
+        ver = run_command(["gh", "--version"])
+    except Exception:
+        ver = CommandResult(args=("gh", "--version"), returncode=127, stdout="", stderr="")
+    if ver.returncode != 0:
+        return {"ok": False, "error": "gh CLI not installed", "code": "GH_NOT_INSTALLED"}
+
     res = run_command(["gh", "auth", "status"])
-    return {"ok": res.returncode == 0, "stderr": res.stderr.strip()}
+    ok = res.returncode == 0
+    # Try to get user and scopes when authed; host is inferred from env or gh config
+    user = None
+    scopes: list[str] = []
+    host = None
+    if ok:
+        # gh api to check current user and token scopes (best-effort)
+        try:
+            me = run_gh_json(["api", "user"])
+            if me and isinstance(me, dict):
+                user = {"login": me.get("login"), "name": me.get("name")}
+        except Exception:
+            user = None
+        # scopes are not directly exposed; leave empty unless GH_TOKEN env exposes it elsewhere
+    payload: dict[str, Any] = {"ok": ok, "user": user, "scopes": scopes, "host": host}
+    if not ok:
+        payload.update(
+            {
+                "error": (res.stderr.strip() or "gh not authenticated"),
+                "code": "GH_NOT_AUTHED",
+            }
+        )
+    return payload
 
 
 def _run_gh(args: list[str]) -> CommandResult:
@@ -24,7 +55,9 @@ def _run_gh(args: list[str]) -> CommandResult:
 def run_gh_json(args: list[str]) -> Any:
     res = _run_gh(args)
     if res.returncode != 0:
-        raise RuntimeError(f"gh failed: {' '.join(args)}\n{res.stderr}")
+        # Normalize gh errors into a standard exception with minimal message
+        msg = res.stderr.strip() or "gh error"
+        raise RuntimeError(msg)
     text = res.stdout.strip()
     if not text:
         return None
@@ -41,6 +74,17 @@ def pr_list(
     cursor: str | None,
 ) -> dict[str, Any]:
     fields = ["number", "state", "author", "createdAt"]
+    # Normalize state for gh; map "any"/unknown -> "all"
+    normalized_state: str | None = None
+    if state:
+        s = state.lower()
+        if s == "any":
+            normalized_state = "all"
+        elif s in {"open", "closed", "merged", "all"}:
+            normalized_state = s
+        else:
+            normalized_state = "all"
+
     args = [
         "pr",
         "list",
@@ -51,13 +95,170 @@ def pr_list(
         "--limit",
         "100",
     ]
+    if normalized_state:
+        args += ["--state", normalized_state]
+    if author:
+        args += ["--author", author]
+    if label:
+        args += ["--label", label]
+
+    try:
+        data = run_gh_json(args) or []
+    except RuntimeError:
+        # Return empty list on invalid filter to avoid noisy errors
+        data = []
+    items = [int(item.get("number")) for item in data if "number" in item]
+    start = decode_cursor(cursor).index
+    if start < 0:
+        start = 0
+    end = start + (limit or len(items))
+    page = items[start:end]
+    has_next = end < len(items)
+    next_cur = encode_cursor(end) if has_next else None
+    return {
+        "repo": f"{owner}/{name}",
+        "filters": {"state": normalized_state or state, "author": author, "label": label},
+        "ids": page,
+        "count": len(page),
+        "has_next": has_next,
+        "next_cursor": next_cur,
+    }
+
+
+def pr_get(owner: str, name: str, number: int) -> dict[str, Any]:
+    fields = [
+        "number",
+        "state",
+        "title",
+        "author",
+        "additions",
+        "deletions",
+        "createdAt",
+        "mergedAt",
+    ]
+    args = [
+        "pr",
+        "view",
+        str(number),
+        "--repo",
+        f"{owner}/{name}",
+        "--json",
+        ",".join(fields),
+    ]
+    try:
+        data = run_gh_json(args) or {}
+    except RuntimeError:
+        return {}
+    meta = {
+        "repo": f"{owner}/{name}",
+        "number": data.get("number"),
+        "state": data.get("state"),
+        "title": data.get("title"),
+        "author": data.get("author"),
+        "additions": data.get("additions"),
+        "deletions": data.get("deletions"),
+        "createdAt": data.get("createdAt"),
+        "mergedAt": data.get("mergedAt"),
+    }
+    meta["tags"] = compute_tags(str(meta.get("title") or ""))
+    return meta
+
+
+def pr_files(
+    owner: str, name: str, number: int, limit: int | None, cursor: str | None
+) -> dict[str, Any]:
+    args = [
+        "api",
+        f"repos/{owner}/{name}/pulls/{number}/files?per_page=100",
+        "-H",
+        "Accept: application/vnd.github+json",
+    ]
+    try:
+        data = run_gh_json(args) or []
+    except RuntimeError:
+        data = []
+    files = [
+        {
+            "path": f.get("filename"),
+            "status": f.get("status"),
+            "additions": f.get("additions"),
+            "deletions": f.get("deletions"),
+        }
+        for f in data
+    ]
+    start = decode_cursor(cursor).index
+    if start < 0:
+        start = 0
+    end = start + (limit or len(files))
+    page = files[start:end]
+    has_next = end < len(files)
+    next_cur = encode_cursor(end) if has_next else None
+    return {
+        "repo": f"{owner}/{name}",
+        "number": number,
+        "files": page,
+        "count": len(page),
+        "has_next": has_next,
+        "next_cursor": next_cur,
+    }
+
+
+def pr_comment(owner: str, name: str, number: int, body: str) -> dict[str, Any]:
+    args = ["pr", "comment", str(number), "--repo", f"{owner}/{name}", "--body", body]
+    res = _run_gh(args)
+    ok = res.returncode == 0
+    return {"ok": ok}
+
+
+def pr_review(owner: str, name: str, number: int, event: str, body: str | None) -> dict[str, Any]:
+    # event: APPROVE | REQUEST_CHANGES | COMMENT
+    args = ["pr", "review", str(number), "--repo", f"{owner}/{name}"]
+    if event.lower() == "approve":
+        args += ["--approve"]
+    elif event.lower() in ("request_changes", "request-changes"):
+        args += ["--request-changes"]
+    else:
+        args += ["--comment"]
+    if body:
+        args += ["--body", body]
+    res = _run_gh(args)
+    return {"ok": res.returncode == 0}
+
+
+def pr_merge(owner: str, name: str, number: int, method: str = "merge") -> dict[str, Any]:
+    # method: merge|squash|rebase
+    args = ["pr", "merge", str(number), "--repo", f"{owner}/{name}"]
+    if method in {"merge", "squash", "rebase"}:
+        args += [f"--{method}"]
+    res = _run_gh(args)
+    return {"ok": res.returncode == 0}
+
+
+def issue_list(
+    owner: str,
+    name: str,
+    state: str | None,
+    author: str | None,
+    label: str | None,
+    limit: int | None,
+    cursor: str | None,
+) -> dict[str, Any]:
+    args = [
+        "issue",
+        "list",
+        "--repo",
+        f"{owner}/{name}",
+        "--json",
+        "number,state,author,title",
+        "--limit",
+        "100",
+    ]
     if state:
         args += ["--state", state]
     if author:
         args += ["--author", author]
     if label:
         args += ["--label", label]
-
     data = run_gh_json(args) or []
     items = [int(item.get("number")) for item in data if "number" in item]
     start = decode_cursor(cursor).index
@@ -77,25 +278,64 @@ def pr_list(
     }
 
 
-def pr_get(owner: str, name: str, number: int) -> dict[str, Any]:
-    fields = ["number", "state", "title", "author"]
+def issue_get(owner: str, name: str, number: int) -> dict[str, Any]:
     args = [
-        "pr",
+        "issue",
         "view",
         str(number),
         "--repo",
         f"{owner}/{name}",
         "--json",
-        ",".join(fields),
+        "number,state,title,author,body",
     ]
-    data = run_gh_json(args) or {}
-    return {
+    try:
+        data = run_gh_json(args) or {}
+    except RuntimeError:
+        return {}
+    meta = {
         "repo": f"{owner}/{name}",
         "number": data.get("number"),
         "state": data.get("state"),
         "title": data.get("title"),
         "author": data.get("author"),
     }
+    meta["tags"] = compute_tags(str(meta.get("title") or ""), str((data.get("body") or "")[:400]))
+    return meta
+
+
+def issue_comment(owner: str, name: str, number: int, body: str) -> dict[str, Any]:
+    args = ["issue", "comment", str(number), "--repo", f"{owner}/{name}", "--body", body]
+    res = _run_gh(args)
+    return {"ok": res.returncode == 0, "stderr": res.stderr.strip() or None}
+
+
+def repo_ref_get_remote(owner: str, name: str, ref: str) -> dict[str, Any]:
+    # Resolve arbitrary ref for a remote repo via gh api/git ref resolution
+    # Try git ref endpoint: /repos/{owner}/{repo}/git/ref/{ref}
+    # ref can be heads/main or tags/v1.0 etc. For shorthand, try as heads/ first.
+    candidates = [ref]
+    if not ref.startswith("heads/") and not ref.startswith("tags/") and ref not in {"HEAD"}:
+        candidates = [f"heads/{ref}", f"tags/{ref}", ref]
+    for c in candidates:
+        try:
+            data = run_gh_json(["api", f"repos/{owner}/{name}/git/ref/{c}"])
+            if isinstance(data, dict):
+                obj = data.get("object") or {}
+                return {"ref": ref, "sha": obj.get("sha")}
+        except RuntimeError:
+            continue
+    # Fallback: try branches endpoint for HEAD-like resolution
+    try:
+        if ref in {"HEAD", "head", "default"}:
+            repo_meta = run_gh_json(["api", f"repos/{owner}/{name}"]) or {}
+            default_branch = repo_meta.get("default_branch")
+            if default_branch:
+                br = run_gh_json(["api", f"repos/{owner}/{name}/branches/{default_branch}"]) or {}
+                commit = br.get("commit") or {}
+                return {"ref": ref, "sha": (commit.get("sha"))}
+    except RuntimeError:
+        pass
+    return {"ref": ref, "sha": None}
 
 
 def pr_timeline(
@@ -110,6 +350,7 @@ def pr_timeline(
         "-H",
         "Accept: application/vnd.github.mockingbird-preview+json",
     ]
+    not_found = False
     try:
         data = run_gh_json(args) or []
     except RuntimeError:
@@ -120,7 +361,12 @@ def pr_timeline(
             "-H",
             "Accept: application/vnd.github+json",
         ]
-        data = run_gh_json(events_args) or []
+        try:
+            data = run_gh_json(events_args) or []
+        except RuntimeError:
+            # Treat missing issue/PR as not_found
+            data = []
+            not_found = True
     events: list[dict[str, Any]] = []
     for n in data:
         events.append(
@@ -144,4 +390,5 @@ def pr_timeline(
         "count": len(page),
         "has_next": has_next,
         "next_cursor": next_cur,
+        "not_found": not_found,
     }

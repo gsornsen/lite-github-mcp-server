@@ -37,6 +37,7 @@ class BlobResult(BaseModel):
     total_size: int
     has_next: bool = False
     next_offset: int | None = None
+    not_found: bool = False
 
 
 class RepoResolve(BaseModel):
