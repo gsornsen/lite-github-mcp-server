@@ -1,8 +1,10 @@
 name: ci
+
 on:
   pull_request:
   push:
     branches: [main]
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,13 +14,28 @@ jobs:
         with:
           python-version: '3.13'
       - uses: astral-sh/setup-uv@v3
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: .uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
       - name: Sync deps
         run: uv sync --dev
       - name: Lint
         run: uv run ruff check .
       - name: Typecheck
         run: uv run mypy src tests
-      - name: Tests
+      - name: Unit tests
         run: uv run pytest -q
       - name: Context budget checks
         run: uv run python scripts/context_budget_check.py
+      - name: Upload coverage (artifact)
+        if: always()
+        run: |
+          uv run pytest --cov=src --cov-report=xml:coverage.xml || true
+      - name: Upload coverage to GitHub (artifact)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
