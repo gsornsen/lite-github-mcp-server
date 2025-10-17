@@ -1,3 +1,6 @@
+import json
+import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -83,44 +86,164 @@ def whoami() -> dict[str, Any]:
     }
 
 
+def _should_log() -> bool:
+    return os.environ.get("LGMCP_LOG_JSON") in {"1", "true", "TRUE", "yes"}
+
+
+def _log_event(event: dict[str, Any]) -> None:
+    try:
+        print(json.dumps(event, separators=(",", ":")))
+    except Exception:
+        # Do not fail server if logging fails
+        pass
+
+
+def _instrument_tool(func: Any, tool_name: str) -> Any:
+    if not _should_log():
+        return func
+
+    def wrapper(*args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
+        start = time.perf_counter()
+        error: str | None = None
+        try:
+            result = func(*args, **kwargs)
+            return result
+        except Exception as exc:
+            error = f"{type(exc).__name__}: {exc}"
+            raise
+        finally:
+            duration_ms = (time.perf_counter() - start) * 1000.0
+            # Keep args minimal to avoid leaking content; only log keys
+            arg_keys = list(kwargs.keys())
+            event = {
+                "type": "tool_call",
+                "tool": tool_name,
+                "duration_ms": round(duration_ms, 2),
+                "arg_keys": arg_keys,
+            }
+            if error is not None:
+                event["error"] = error
+            _log_event(event)
+
+    return wrapper
+
+
 def register_tools(app: Any) -> None:
-    app.add_tool(Tool.from_function(ping, name="gh.ping", description="Health check"))
-    app.add_tool(Tool.from_function(whoami, name="gh.whoami", description="gh auth status"))
     app.add_tool(
         Tool.from_function(
-            repo_branches_list, name="gh.repo.branches.list", description="List branch names"
+            _instrument_tool(ping, "gh.ping"), name="gh.ping", description="Health check"
         )
     )
     app.add_tool(
-        Tool.from_function(file_tree, name="gh.file.tree", description="List files at ref")
-    )
-    app.add_tool(
-        Tool.from_function(file_blob, name="gh.file.blob", description="Get file blob by sha")
-    )
-    app.add_tool(
         Tool.from_function(
-            search_files, name="gh.search.files", description="Search files via git grep"
+            _instrument_tool(whoami, "gh.whoami"), name="gh.whoami", description="gh auth status"
         )
     )
     app.add_tool(
-        Tool.from_function(repo_resolve, name="gh.repo.resolve", description="Resolve repo info")
+        Tool.from_function(
+            _instrument_tool(repo_branches_list, "gh.repo.branches.list"),
+            name="gh.repo.branches.list",
+            description="List branch names",
+        )
     )
     app.add_tool(
-        Tool.from_function(repo_refs_get, name="gh.repo.refs.get", description="Resolve ref to sha")
+        Tool.from_function(
+            _instrument_tool(file_tree, "gh.file.tree"),
+            name="gh.file.tree",
+            description="List files at ref",
+        )
     )
-    app.add_tool(Tool.from_function(pr_list, name="gh.pr.list", description="List PR ids"))
-    app.add_tool(Tool.from_function(pr_get, name="gh.pr.get", description="Get PR meta"))
     app.add_tool(
-        Tool.from_function(pr_timeline, name="gh.pr.timeline", description="PR timeline events")
+        Tool.from_function(
+            _instrument_tool(file_blob, "gh.file.blob"),
+            name="gh.file.blob",
+            description="Get file blob by sha",
+        )
     )
-    app.add_tool(Tool.from_function(pr_files, name="gh.pr.files", description="PR changed files"))
-    app.add_tool(Tool.from_function(pr_comment, name="gh.pr.comment", description="Comment on PR"))
-    app.add_tool(Tool.from_function(pr_review, name="gh.pr.review", description="Review PR"))
-    app.add_tool(Tool.from_function(pr_merge, name="gh.pr.merge", description="Merge PR"))
-    app.add_tool(Tool.from_function(issue_list, name="gh.issue.list", description="List issues"))
-    app.add_tool(Tool.from_function(issue_get, name="gh.issue.get", description="Get issue"))
     app.add_tool(
-        Tool.from_function(issue_comment, name="gh.issue.comment", description="Comment on issue")
+        Tool.from_function(
+            _instrument_tool(search_files, "gh.search.files"),
+            name="gh.search.files",
+            description="Search files via git grep",
+        )
+    )
+    app.add_tool(
+        Tool.from_function(
+            _instrument_tool(repo_resolve, "gh.repo.resolve"),
+            name="gh.repo.resolve",
+            description="Resolve repo info",
+        )
+    )
+    app.add_tool(
+        Tool.from_function(
+            _instrument_tool(repo_refs_get, "gh.repo.refs.get"),
+            name="gh.repo.refs.get",
+            description="Resolve ref to sha",
+        )
+    )
+    app.add_tool(
+        Tool.from_function(
+            _instrument_tool(pr_list, "gh.pr.list"), name="gh.pr.list", description="List PR ids"
+        )
+    )
+    app.add_tool(
+        Tool.from_function(
+            _instrument_tool(pr_get, "gh.pr.get"), name="gh.pr.get", description="Get PR meta"
+        )
+    )
+    app.add_tool(
+        Tool.from_function(
+            _instrument_tool(pr_timeline, "gh.pr.timeline"),
+            name="gh.pr.timeline",
+            description="PR timeline events",
+        )
+    )
+    app.add_tool(
+        Tool.from_function(
+            _instrument_tool(pr_files, "gh.pr.files"),
+            name="gh.pr.files",
+            description="PR changed files",
+        )
+    )
+    app.add_tool(
+        Tool.from_function(
+            _instrument_tool(pr_comment, "gh.pr.comment"),
+            name="gh.pr.comment",
+            description="Comment on PR",
+        )
+    )
+    app.add_tool(
+        Tool.from_function(
+            _instrument_tool(pr_review, "gh.pr.review"),
+            name="gh.pr.review",
+            description="Review PR",
+        )
+    )
+    app.add_tool(
+        Tool.from_function(
+            _instrument_tool(pr_merge, "gh.pr.merge"), name="gh.pr.merge", description="Merge PR"
+        )
+    )
+    app.add_tool(
+        Tool.from_function(
+            _instrument_tool(issue_list, "gh.issue.list"),
+            name="gh.issue.list",
+            description="List issues",
+        )
+    )
+    app.add_tool(
+        Tool.from_function(
+            _instrument_tool(issue_get, "gh.issue.get"),
+            name="gh.issue.get",
+            description="Get issue",
+        )
+    )
+    app.add_tool(
+        Tool.from_function(
+            _instrument_tool(issue_comment, "gh.issue.comment"),
+            name="gh.issue.comment",
+            description="Comment on issue",
+        )
     )
 
 

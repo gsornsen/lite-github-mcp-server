@@ -37,6 +37,39 @@ just compose_down
 - `gh.ping` and `gh.whoami` are available; `whoami` is a placeholder until auth wiring.
 - For FastMCP concepts and up-to-date API details, see the MDX docs: https://github.com/jlowin/fastmcp/tree/main/docs
 
+### Observability (optional)
+
+- Structured JSON logging for tool calls (opt-in):
+
+```bash
+# Enable lightweight timing logs (one line per tool call)
+LGMCP_LOG_JSON=1 just run
+# or
+LGMCP_LOG_JSON=1 uv run python -m lite_github_mcp.server
+```
+
+Emitted fields: `tool`, `arg_keys`, `duration_ms`, optional `error`.
+
+- Context budget checks:
+  - CI enforces budgets for the tool registry (bytes and token estimates)
+  - Local live test (schema-aware):
+
+```bash
+# Run only the marked context test and print a brief report
+just test_context
+# Or with pytest directly
+uv run pytest -q -m context_budget -s
+```
+
+You’ll see a short report like:
+
+```
+Context budget (tool registry):
+  minimal bytes: 1084 / 8192 (13.2%)
+  full bytes:    5628 / 32768 (17.2%)
+  tokens:        1407 / 4000 (35.2%)
+```
+
 ## CLI examples (paging and ranges)
 
 ```bash
