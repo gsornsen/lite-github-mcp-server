@@ -61,6 +61,7 @@ from lite_github_mcp.services.git_cli import (
     show_blob,
 )
 from lite_github_mcp.services.pager import decode_cursor, encode_cursor
+from lite_github_mcp.utils.errors import GH_ERROR, ErrorEnvelope
 
 
 def ping() -> dict[str, Any]:
@@ -72,11 +73,11 @@ def whoami() -> dict[str, Any]:
 
     status = gh_auth_status()
     if not status.get("ok"):
-        return {
-            "ok": False,
-            "code": status.get("code") or "GH_ERROR",
-            "error": status.get("error") or "gh error",
-        }
+        return ErrorEnvelope(
+            code=status.get("code") or GH_ERROR,
+            message=status.get("error") or "gh error",
+            details={},
+        ).to_dict()
     return {
         "ok": True,
         "authed": True,
@@ -414,10 +415,15 @@ def pr_get(repo: str, number: int) -> PRGet:
 
 
 def pr_timeline(
-    repo: str, number: int, limit: int | None = None, cursor: str | None = None
+    repo: str,
+    number: int,
+    limit: int | None = None,
+    cursor: str | None = None,
+    *,
+    filter_nulls: bool = False,
 ) -> PRTimeline:
     owner, name = repo.split("/", 1)
-    data = gh_pr_timeline(owner, name, number, limit, cursor)
+    data = gh_pr_timeline(owner, name, number, limit, cursor, filter_nulls=filter_nulls)
     return PRTimeline(**data)
 
 

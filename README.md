@@ -34,7 +34,7 @@ just compose_down
 
 ## Notes
 - Targets Python 3.13+; `uvloop` remains optional on Linux.
-- `gh.ping` and `gh.whoami` are available; `whoami` is a placeholder until auth wiring.
+- `gh.ping` and `gh.whoami` are available; `whoami` returns a minimal auth status.
 - For FastMCP concepts and up-to-date API details, see the MDX docs: https://github.com/jlowin/fastmcp/tree/main/docs
 
 ### Observability (optional)
@@ -49,6 +49,14 @@ LGMCP_LOG_JSON=1 uv run python -m lite_github_mcp.server
 ```
 
 Emitted fields: `tool`, `arg_keys`, `duration_ms`, optional `error`.
+
+- Caching and ETag:
+
+```bash
+# Disk-backed cache using `diskcache` under XDG cache dir
+# ETag-based conditional requests are enabled for GitHub REST via gh api
+# Cache TTLs: lists=30s, meta=5m, blobs=1h
+```
 
 - Context budget checks:
   - CI enforces budgets for the tool registry (bytes and token estimates)
