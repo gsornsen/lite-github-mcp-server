@@ -4,15 +4,21 @@ on:
   pull_request:
   push:
     branches: [main]
+  schedule:
+    - cron: '0 6 * * *'
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.13']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: ${{ matrix.python-version }}
       - uses: astral-sh/setup-uv@v3
       - name: Cache uv
         uses: actions/cache@v4
@@ -27,6 +33,19 @@ jobs:
         run: uv run mypy src tests
       - name: Unit tests
         run: uv run pytest -q
+      - name: Diff-based tests (testmon)
+        run: |
+          git fetch --depth=2 origin ${{ github.base_ref || 'main' }} || true
+          echo "Running diff-based tests"
+          uv run pytest --testmon -q || true
+      - name: Coverage XML
+        run: uv run pytest --cov=src --cov-report=xml:coverage.xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
+          fail_ci_if_error: false
       - name: Live context budget test
         run: uv run pytest -q -m context_budget
       - name: Context budget checks
