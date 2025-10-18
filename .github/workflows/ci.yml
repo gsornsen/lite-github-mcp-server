@@ -77,15 +77,17 @@ jobs:
       - name: Unit tests
         run: uv run pytest -q
       - name: Coverage XML
+        if: matrix.python-version == '3.13'
         run: uv run pytest --cov=src --cov-report=xml:coverage.xml
       - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.13'
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
           fail_ci_if_error: false
       - name: Upload coverage to GitHub (artifact)
-        if: always()
+        if: always() && matrix.python-version == '3.13'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-xml
