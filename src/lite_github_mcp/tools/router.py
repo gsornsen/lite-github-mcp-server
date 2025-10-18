@@ -415,10 +415,15 @@ def pr_get(repo: str, number: int) -> PRGet:
 
 
 def pr_timeline(
-    repo: str, number: int, limit: int | None = None, cursor: str | None = None
+    repo: str,
+    number: int,
+    limit: int | None = None,
+    cursor: str | None = None,
+    *,
+    filter_nulls: bool = False,
 ) -> PRTimeline:
     owner, name = repo.split("/", 1)
-    data = gh_pr_timeline(owner, name, number, limit, cursor)
+    data = gh_pr_timeline(owner, name, number, limit, cursor, filter_nulls=filter_nulls)
     return PRTimeline(**data)
 
 

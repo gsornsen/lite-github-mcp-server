@@ -52,3 +52,16 @@ def test_pr_timeline_monkeypatched(monkeypatch: Any) -> None:
     assert out.count == 1 and out.has_next is True and out.next_cursor
     out2 = pr_timeline("o/n", number=7, limit=1, cursor=out.next_cursor)
     assert out2.count == 1 and out2.has_next is False
+
+    # With filter_nulls=True, events with any nulls should be excluded
+    rest_events2 = [
+        {"event": "committed", "created_at": None, "actor": {"login": None}},
+        {"event": "merged", "created_at": "t", "actor": {"login": "ok"}},
+    ]
+
+    def fake_run_gh_json2(args: list[str]) -> Any:  # noqa: ANN401
+        return rest_events2
+
+    monkeypatch.setattr(gh_cli, "run_gh_json", fake_run_gh_json2)
+    out3 = pr_timeline("o/n", number=8, limit=5, filter_nulls=True)
+    assert out3.count == 1

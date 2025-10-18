@@ -432,7 +432,13 @@ def repo_ref_get_remote(owner: str, name: str, ref: str) -> dict[str, Any]:
 
 
 def pr_timeline(
-    owner: str, name: str, number: int, limit: int | None, cursor: str | None
+    owner: str,
+    name: str,
+    number: int,
+    limit: int | None,
+    cursor: str | None,
+    *,
+    filter_nulls: bool = False,
 ) -> dict[str, Any]:
     # Use REST timeline for broad compatibility
     not_found = False
@@ -469,6 +475,8 @@ def pr_timeline(
                 "createdAt": n.get("created_at") or n.get("createdAt"),
             }
         )
+    if filter_nulls:
+        events = [e for e in events if all(v is not None for v in e.values())]
     start = decode_cursor(cursor).index
     if start < 0:
         start = 0
