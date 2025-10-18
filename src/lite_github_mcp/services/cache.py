@@ -4,12 +4,17 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-try:
-    import diskcache
-except Exception as exc:  # pragma: no cover - import error surfaced at runtime
-    raise RuntimeError("diskcache is required for caching; add it to runtime dependencies") from exc
+if TYPE_CHECKING:  # mypy: avoid importing third-party lib without stubs
+    _diskcache: Any = None
+else:
+    try:
+        import diskcache as _diskcache
+    except Exception as exc:  # pragma: no cover - import error surfaced at runtime
+        raise RuntimeError(
+            "diskcache is required for caching; add it to runtime dependencies"
+        ) from exc
 
 
 # TTLs by category (seconds)
@@ -43,7 +48,8 @@ class CacheStore:
     path: Path
 
     def __post_init__(self) -> None:
-        self._cache = diskcache.Cache(str(self.path))
+        # Annotate as Any to avoid missing type info
+        self._cache: Any = _diskcache.Cache(str(self.path))
 
     # JSON helpers
     def get_json(self, key: str) -> Any | None:
