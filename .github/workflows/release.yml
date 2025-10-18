@@ -28,13 +28,13 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
       - name: Install commitizen and gh
         run: |
-          uv pip install commitizen
+          uv sync --dev
           sudo apt-get update && sudo apt-get install -y gh
       - name: Bump version and changelog if needed
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cz bump --changelog --yes || echo "No version bump"
+          uv run cz bump --changelog --yes || echo "No version bump"
       - name: Push tags
         if: success()
         env:

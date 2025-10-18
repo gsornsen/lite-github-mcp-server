@@ -4,15 +4,24 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Nightly to catch ecosystem drift (e.g., transitive deps, toolchain updates)
+  # and to keep coverage/health signals fresh even without commits.
+  # Optional: remove if you prefer only on-change CI.
+  schedule:
+    - cron: '0 6 * * *'
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.13']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: ${{ matrix.python-version }}
       - uses: astral-sh/setup-uv@v3
       - name: Cache uv
         uses: actions/cache@v4
@@ -23,21 +32,110 @@ jobs:
         run: uv sync --dev
       - name: Lint
         run: uv run ruff check .
+
+  typecheck:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v3
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: .uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
+      - name: Sync deps
+        run: uv sync --dev
       - name: Typecheck
         run: uv run mypy src tests
+
+  unit_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v3
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: .uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
+      - name: Sync deps
+        run: uv sync --dev
       - name: Unit tests
         run: uv run pytest -q
-      - name: Live context budget test
-        run: uv run pytest -q -m context_budget
-      - name: Context budget checks
-        run: uv run python scripts/context_budget_check.py
-      - name: Upload coverage (artifact)
-        if: always()
-        run: |
-          uv run pytest --cov=src --cov-report=xml:coverage.xml || true
+      - name: Coverage XML
+        run: uv run pytest --cov=src --cov-report=xml:coverage.xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
+          fail_ci_if_error: false
       - name: Upload coverage to GitHub (artifact)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-xml
           path: coverage.xml
+
+  diff_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v3
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: .uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
+      - name: Sync deps
+        run: uv sync --dev
+      - name: Diff-based tests (testmon)
+        run: |
+          git fetch --depth=2 origin ${{ github.base_ref || 'main' }} || true
+          echo "Running diff-based tests"
+          uv run pytest --testmon -q || true
+
+  context_budget:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v3
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: .uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
+      - name: Sync deps
+        run: uv sync --dev
+      - name: Live context budget test
+        run: uv run pytest -q -m context_budget
+      - name: Context budget checks
+        run: uv run python scripts/context_budget_check.py
