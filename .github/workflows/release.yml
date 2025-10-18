@@ -39,7 +39,11 @@ jobs:
         run: |
           set -e
           # Try incremental changelog; if no previous tags, at least bump version/tag
-          uv run cz bump --changelog --yes || uv run cz bump --yes || echo "No version bump"
+          if git tag --list 'v*' | grep -q .; then
+            uv run cz bump --changelog --yes || echo "No version bump"
+          else
+            uv run cz bump --yes || echo "No version bump"
+          fi
       - name: Push tags
         if: success()
         env:
@@ -53,7 +57,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || git tag --list "v*" | sort -V | tail -n1 || true)
-          if [ -n "$LATEST_TAG" ]; then \
-            gh release create "$LATEST_TAG" -F CHANGELOG.md -t "$LATEST_TAG" --latest || true; \
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || git tag --list 'v*' | sort -V | tail -n1 || true)
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No tag found after bump, attempting to create initial tag from version in pyproject.toml"
+            VERSION=$(grep '^version\s*=\s*"' pyproject.toml | head -n1 | sed -E 's/.*"([^"]+)".*/\1/')
+            if [ -n "$VERSION" ]; then
+              git tag -a "v$VERSION" -m "v$VERSION" || true
+              git push origin --tags || true
+              LATEST_TAG="v$VERSION"
+            fi
+          fi
+          if [ -n "$LATEST_TAG" ]; then
+            gh release create "$LATEST_TAG" -F CHANGELOG.md -t "$LATEST_TAG" --latest || true
           fi
