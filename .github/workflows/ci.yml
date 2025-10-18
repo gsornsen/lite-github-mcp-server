@@ -4,6 +4,9 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Nightly to catch ecosystem drift (e.g., transitive deps, toolchain updates)
+  # and to keep coverage/health signals fresh even without commits.
+  # Optional: remove if you prefer only on-change CI.
   schedule:
     - cron: '0 6 * * *'
 
