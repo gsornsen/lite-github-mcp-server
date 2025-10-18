@@ -16,18 +16,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.13']
+        python-version: ['3.10', '3.11', '3.12', '3.13']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - uses: astral-sh/setup-uv@v3
-      - name: Cache uv
+      - name: Cache uv and venv
         uses: actions/cache@v4
         with:
-          path: .uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-uv-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-py${{ matrix.python-version }}-uv-
+            ${{ runner.os }}-uv-
       - name: Sync deps
         run: uv sync --dev
       - name: Lint
@@ -38,18 +43,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.13']
+        python-version: ['3.10', '3.11', '3.12', '3.13']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - uses: astral-sh/setup-uv@v3
-      - name: Cache uv
+      - name: Cache uv and venv
         uses: actions/cache@v4
         with:
-          path: .uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-uv-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-py${{ matrix.python-version }}-uv-
+            ${{ runner.os }}-uv-
       - name: Sync deps
         run: uv sync --dev
       - name: Typecheck
@@ -60,32 +70,39 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.13']
+        python-version: ['3.10', '3.11', '3.12', '3.13']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - uses: astral-sh/setup-uv@v3
-      - name: Cache uv
+      - name: Cache uv and venv
         uses: actions/cache@v4
         with:
-          path: .uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-uv-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-py${{ matrix.python-version }}-uv-
+            ${{ runner.os }}-uv-
       - name: Sync deps
         run: uv sync --dev
       - name: Unit tests
         run: uv run pytest -q
       - name: Coverage XML
+        if: matrix.python-version == '3.13'
         run: uv run pytest --cov=src --cov-report=xml:coverage.xml
       - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.13'
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
           fail_ci_if_error: false
       - name: Upload coverage to GitHub (artifact)
-        if: always()
+        if: always() && matrix.python-version == '3.13'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-xml
@@ -96,18 +113,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.13']
+        python-version: ['3.10', '3.11', '3.12', '3.13']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - uses: astral-sh/setup-uv@v3
-      - name: Cache uv
+      - name: Cache uv and venv
         uses: actions/cache@v4
         with:
-          path: .uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-uv-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-py${{ matrix.python-version }}-uv-
+            ${{ runner.os }}-uv-
       - name: Sync deps
         run: uv sync --dev
       - name: Diff-based tests (testmon)

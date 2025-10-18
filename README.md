@@ -1,9 +1,15 @@
 # Lite GitHub MCP Server
 
+[![CI](https://github.com/gsornsen/lite-github-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/gsornsen/lite-github-mcp-server/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/gsornsen/lite-github-mcp-server/actions/workflows/codeql.yml/badge.svg)](https://github.com/gsornsen/lite-github-mcp-server/actions/workflows/codeql.yml)
+[![codecov](https://codecov.io/gh/gsornsen/lite-github-mcp-server/graph/badge.svg?token=rhtiK8xtin)](https://codecov.io/gh/gsornsen/lite-github-mcp-server)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](pyproject.toml)
+
 Minimal, context-efficient MCP server for GitHub with a CLI-first approach.
 
 ## Requirements
-- Python 3.13+
+- Python 3.10+
 - git, gh CLI installed (for later milestones)
 
 ## Quickstart
@@ -33,7 +39,7 @@ just compose_down
 ```
 
 ## Notes
-- Targets Python 3.13+; `uvloop` remains optional on Linux.
+- Targets Python 3.10+; `uvloop` remains optional on Linux.
 - `gh.ping` and `gh.whoami` are available; `whoami` returns a minimal auth status.
 - For FastMCP concepts and up-to-date API details, see the MDX docs: https://github.com/jlowin/fastmcp/tree/main/docs
 
