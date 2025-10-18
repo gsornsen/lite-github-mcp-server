@@ -4,6 +4,7 @@ import json
 from typing import Any
 
 from lite_github_mcp.services.analytics import compute_tags
+from lite_github_mcp.services.cache import get_cache, ttl_for_category
 from lite_github_mcp.services.pager import decode_cursor, encode_cursor
 from lite_github_mcp.utils.subprocess import CommandResult, run_command
 
@@ -62,6 +63,72 @@ def run_gh_json(args: list[str]) -> Any:
     if not text:
         return None
     return json.loads(text)
+
+
+# --- Cached GitHub REST helpers (via `gh api`) ---
+
+
+def _split_headers_body(text: str) -> tuple[dict[str, str], str]:
+    # gh api -i prefixes response headers; split once at last blank line
+    sep = "\r\n\r\n"
+    if sep in text:
+        head, body = text.rsplit(sep, 1)
+    else:
+        head, body = text.rsplit("\n\n", 1) if "\n\n" in text else ("", text)
+    headers: dict[str, str] = {}
+    if head:
+        lines = [ln for ln in head.splitlines() if ln.strip()]
+        # Only keep the last header block if multiple HTTP status lines exist
+        # Find last index of a line starting with HTTP/
+        status_idx = max((i for i, ln in enumerate(lines) if ln.startswith("HTTP/")), default=-1)
+        if status_idx >= 0:
+            lines = lines[status_idx:]
+        for ln in lines[1:]:
+            if ":" in ln:
+                k, v = ln.split(":", 1)
+                headers[k.strip().lower()] = v.strip()
+        # Store status code for convenience
+        if lines:
+            parts = lines[0].split()
+            if len(parts) >= 2 and parts[1].isdigit():
+                headers[":status"] = parts[1]
+    return headers, body
+
+
+def _api_get_json_cached(path: str, extra_headers: list[str] | None, category: str) -> Any:
+    cache = get_cache()
+    data_key = f"api:{path}"
+    etag_key = f"etag:{path}"
+    headers_args: list[str] = [
+        "-H",
+        "Accept: application/vnd.github+json",
+    ]
+    # Add If-None-Match when we have a stored etag
+    etag = cache.get_etag(etag_key)
+    if etag:
+        headers_args += ["-H", f"If-None-Match: {etag}"]
+    if extra_headers:
+        for h in extra_headers:
+            headers_args += ["-H", h]
+
+    # Use -i/--include to capture response headers for ETag/304
+    res = _run_gh(["api", path, "-i", *headers_args])
+    if res.returncode != 0:
+        msg = res.stderr.strip() or "gh api error"
+        raise RuntimeError(msg)
+    hdrs, body_text = _split_headers_body(res.stdout)
+    status = int(hdrs.get(":status", "200"))
+    if status == 304:
+        cached = cache.get_json(data_key)
+        return cached if cached is not None else []
+    # Parse and cache
+    obj = json.loads(body_text) if body_text.strip() else None
+    # Capture ETag if available
+    etag_value = hdrs.get("etag")
+    if etag_value:
+        cache.set_etag(etag_key, etag_value)
+    cache.set_json(data_key, obj, ttl_for_category(category))
+    return obj
 
 
 def pr_list(
@@ -167,14 +234,9 @@ def pr_get(owner: str, name: str, number: int) -> dict[str, Any]:
 def pr_files(
     owner: str, name: str, number: int, limit: int | None, cursor: str | None
 ) -> dict[str, Any]:
-    args = [
-        "api",
-        f"repos/{owner}/{name}/pulls/{number}/files?per_page=100",
-        "-H",
-        "Accept: application/vnd.github+json",
-    ]
+    path = f"repos/{owner}/{name}/pulls/{number}/files?per_page=100"
     try:
-        data = run_gh_json(args) or []
+        data = _api_get_json_cached(path, extra_headers=None, category="lists") or []
     except RuntimeError:
         data = []
     files = [
@@ -207,6 +269,11 @@ def pr_comment(owner: str, name: str, number: int, body: str) -> dict[str, Any]:
     args = ["pr", "comment", str(number), "--repo", f"{owner}/{name}", "--body", body]
     res = _run_gh(args)
     ok = res.returncode == 0
+    if ok:
+        # Invalidate PR issue timeline endpoints and PR files
+        cache = get_cache()
+        prefix = f"api:repos/{owner}/{name}/issues/{number}/"
+        cache.invalidate_prefix(prefix)
     return {"ok": ok}
 
 
@@ -222,7 +289,12 @@ def pr_review(owner: str, name: str, number: int, event: str, body: str | None) 
     if body:
         args += ["--body", body]
     res = _run_gh(args)
-    return {"ok": res.returncode == 0}
+    ok = res.returncode == 0
+    if ok:
+        cache = get_cache()
+        cache.invalidate_prefix(f"api:repos/{owner}/{name}/issues/{number}/")
+        cache.invalidate_prefix(f"api:repos/{owner}/{name}/pulls/{number}/")
+    return {"ok": ok}
 
 
 def pr_merge(owner: str, name: str, number: int, method: str = "merge") -> dict[str, Any]:
@@ -231,7 +303,12 @@ def pr_merge(owner: str, name: str, number: int, method: str = "merge") -> dict[
     if method in {"merge", "squash", "rebase"}:
         args += [f"--{method}"]
     res = _run_gh(args)
-    return {"ok": res.returncode == 0}
+    ok = res.returncode == 0
+    if ok:
+        cache = get_cache()
+        cache.invalidate_prefix(f"api:repos/{owner}/{name}/issues/{number}/")
+        cache.invalidate_prefix(f"api:repos/{owner}/{name}/pulls/{number}/")
+    return {"ok": ok}
 
 
 def issue_list(
@@ -306,7 +383,11 @@ def issue_get(owner: str, name: str, number: int) -> dict[str, Any]:
 def issue_comment(owner: str, name: str, number: int, body: str) -> dict[str, Any]:
     args = ["issue", "comment", str(number), "--repo", f"{owner}/{name}", "--body", body]
     res = _run_gh(args)
-    return {"ok": res.returncode == 0, "stderr": res.stderr.strip() or None}
+    ok = res.returncode == 0
+    if ok:
+        cache = get_cache()
+        cache.invalidate_prefix(f"api:repos/{owner}/{name}/issues/{number}/")
+    return {"ok": ok, "stderr": res.stderr.strip() or None}
 
 
 def repo_ref_get_remote(owner: str, name: str, ref: str) -> dict[str, Any]:
@@ -318,7 +399,9 @@ def repo_ref_get_remote(owner: str, name: str, ref: str) -> dict[str, Any]:
         candidates = [f"heads/{ref}", f"tags/{ref}", ref]
     for c in candidates:
         try:
-            data = run_gh_json(["api", f"repos/{owner}/{name}/git/ref/{c}"])
+            data = _api_get_json_cached(
+                f"repos/{owner}/{name}/git/ref/{c}", extra_headers=None, category="meta"
+            )
             if isinstance(data, dict):
                 obj = data.get("object") or {}
                 return {"ref": ref, "sha": obj.get("sha")}
@@ -327,10 +410,20 @@ def repo_ref_get_remote(owner: str, name: str, ref: str) -> dict[str, Any]:
     # Fallback: try branches endpoint for HEAD-like resolution
     try:
         if ref in {"HEAD", "head", "default"}:
-            repo_meta = run_gh_json(["api", f"repos/{owner}/{name}"]) or {}
+            repo_meta = (
+                _api_get_json_cached(f"repos/{owner}/{name}", extra_headers=None, category="meta")
+                or {}
+            )
             default_branch = repo_meta.get("default_branch")
             if default_branch:
-                br = run_gh_json(["api", f"repos/{owner}/{name}/branches/{default_branch}"]) or {}
+                br = (
+                    _api_get_json_cached(
+                        f"repos/{owner}/{name}/branches/{default_branch}",
+                        extra_headers=None,
+                        category="meta",
+                    )
+                    or {}
+                )
                 commit = br.get("commit") or {}
                 return {"ref": ref, "sha": (commit.get("sha"))}
     except RuntimeError:
@@ -342,6 +435,7 @@ def pr_timeline(
     owner: str, name: str, number: int, limit: int | None, cursor: str | None
 ) -> dict[str, Any]:
     # Use REST timeline for broad compatibility
+    not_found = False
     args = [
         "api",
         f"repos/{owner}/{name}/issues/{number}/timeline?per_page=100",
@@ -350,7 +444,6 @@ def pr_timeline(
         "-H",
         "Accept: application/vnd.github.mockingbird-preview+json",
     ]
-    not_found = False
     try:
         data = run_gh_json(args) or []
     except RuntimeError:

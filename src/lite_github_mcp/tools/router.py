@@ -61,6 +61,7 @@ from lite_github_mcp.services.git_cli import (
     show_blob,
 )
 from lite_github_mcp.services.pager import decode_cursor, encode_cursor
+from lite_github_mcp.utils.errors import GH_ERROR, ErrorEnvelope
 
 
 def ping() -> dict[str, Any]:
@@ -72,11 +73,11 @@ def whoami() -> dict[str, Any]:
 
     status = gh_auth_status()
     if not status.get("ok"):
-        return {
-            "ok": False,
-            "code": status.get("code") or "GH_ERROR",
-            "error": status.get("error") or "gh error",
-        }
+        return ErrorEnvelope(
+            code=status.get("code") or GH_ERROR,
+            message=status.get("error") or "gh error",
+            details={},
+        ).to_dict()
     return {
         "ok": True,
         "authed": True,
