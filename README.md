@@ -58,6 +58,12 @@ servers:
 export MCP_SERVER_GITHUB_COMMAND="uvx lite-github-mcp"
 ```
 
+### Packaging and builds
+
+- Uses uv's build backend (`uv_build`) for PEP 517 builds, driven via `uv build`.
+- Dev dependencies are managed with `[dependency-groups]` and installed via `uv sync --group dev`.
+- Publishing is automated in GitHub Actions on Release creation.
+
 ## Docker
 
 ```bash

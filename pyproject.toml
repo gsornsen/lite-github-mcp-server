@@ -29,21 +29,11 @@ lite-github-mcp = "lite_github_mcp.server:main"
 lite-github-mcp-cli = "lite_github_mcp.cli:app"
 
 [build-system]
-# Build with uv as the frontend; backend remains standard PEP 517.
-# If/when uv exposes a stable build backend, we can switch here.
-requires = ["hatchling>=1.25"]
-build-backend = "hatchling.build"
+# Use uv's build backend per https://docs.astral.sh/uv/concepts/build-backend/
+requires = ["uv>=0.4.0", "uv-build>=0.4.0"]
+build-backend = "uv_build"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/lite_github_mcp"]
 
-[tool.hatch.build.targets.sdist]
-include = [
-  "src/lite_github_mcp",
-  "README.md",
-  "LICENSE",
-  "pyproject.toml",
-]
 
 [dependency-groups]
 # New-style uv dependency groups (replaces deprecated tool.uv.dev-dependencies)
