@@ -34,7 +34,7 @@ jobs:
             ${{ runner.os }}-py${{ matrix.python-version }}-uv-
             ${{ runner.os }}-uv-
       - name: Sync deps
-        run: uv sync --dev
+        run: uv sync --group dev
       - name: Lint
         run: uv run ruff check .
 
@@ -61,7 +61,7 @@ jobs:
             ${{ runner.os }}-py${{ matrix.python-version }}-uv-
             ${{ runner.os }}-uv-
       - name: Sync deps
-        run: uv sync --dev
+        run: uv sync --group dev
       - name: Typecheck
         run: uv run mypy src tests
 
@@ -88,7 +88,7 @@ jobs:
             ${{ runner.os }}-py${{ matrix.python-version }}-uv-
             ${{ runner.os }}-uv-
       - name: Sync deps
-        run: uv sync --dev
+        run: uv sync --group dev
       - name: Unit tests
         run: uv run pytest -q
       - name: Coverage XML
@@ -131,7 +131,7 @@ jobs:
             ${{ runner.os }}-py${{ matrix.python-version }}-uv-
             ${{ runner.os }}-uv-
       - name: Sync deps
-        run: uv sync --dev
+        run: uv sync --group dev
       - name: Diff-based tests (testmon)
         run: |
           git fetch --depth=2 origin ${{ github.base_ref || 'main' }} || true
@@ -156,7 +156,7 @@ jobs:
           path: .uv
           key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
       - name: Sync deps
-        run: uv sync --dev
+        run: uv sync --group dev
       - name: Live context budget test
         run: uv run pytest -q -m context_budget
       - name: Context budget checks

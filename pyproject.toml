@@ -29,12 +29,15 @@ lite-github-mcp = "lite_github_mcp.server:main"
 lite-github-mcp-cli = "lite_github_mcp.cli:app"
 
 [build-system]
-requires = ["hatchling>=1.25"]
-build-backend = "hatchling.build"
+# Use uv's build backend per https://docs.astral.sh/uv/concepts/build-backend/
+requires = ["uv>=0.4.0", "uv-build>=0.4.0"]
+build-backend = "uv_build"
 
-[tool.uv]
-# Dev dependencies for `uv sync --dev`
-dev-dependencies = [
+
+
+[dependency-groups]
+# New-style uv dependency groups (replaces deprecated tool.uv.dev-dependencies)
+dev = [
   "ruff>=0.6",
   "mypy>=1.11",
   "pytest>=8.3",

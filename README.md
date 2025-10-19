@@ -29,6 +29,41 @@ just run
 just fmt && just lint
 ```
 
+### Run with uvx (no local checkout required)
+
+```bash
+# One-off run of the MCP server from PyPI using uvx
+uvx lite-github-mcp
+
+# CLI client (tools introspection and tool calls)
+uvx lite-github-mcp-cli tools
+uvx lite-github-mcp-cli call gh.ping
+```
+
+### Open WebUI integration (MCP)
+
+- With an MCP orchestrator (mcpo): point mcpo at the command `uvx lite-github-mcp`.
+
+```yaml
+# Example mcpo config snippet
+servers:
+  github:
+    command: ["uvx", "lite-github-mcp"]
+```
+
+- Without mcpo: if your Open WebUI supports direct MCP command configuration, set it to `uvx lite-github-mcp`.
+
+```bash
+# Example: environment-driven configuration (adjust to your Open WebUI setup)
+export MCP_SERVER_GITHUB_COMMAND="uvx lite-github-mcp"
+```
+
+### Packaging and builds
+
+- Uses uv's build backend (`uv_build`) for PEP 517 builds, driven via `uv build`.
+- Dev dependencies are managed with `[dependency-groups]` and installed via `uv sync --group dev`.
+- Publishing is automated in GitHub Actions on Release creation.
+
 ## Docker
 
 ```bash
