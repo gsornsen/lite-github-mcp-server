@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import Any
 
 from lite_github_mcp.services.analytics import compute_tags
@@ -112,23 +113,49 @@ def _api_get_json_cached(path: str, extra_headers: list[str] | None, category: s
             headers_args += ["-H", h]
 
     # Use -i/--include to capture response headers for ETag/304
-    res = _run_gh(["api", path, "-i", *headers_args])
-    if res.returncode != 0:
-        msg = res.stderr.strip() or "gh api error"
-        raise RuntimeError(msg)
-    hdrs, body_text = _split_headers_body(res.stdout)
-    status = int(hdrs.get(":status", "200"))
-    if status == 304:
-        cached = cache.get_json(data_key)
-        return cached if cached is not None else []
-    # Parse and cache
-    obj = json.loads(body_text) if body_text.strip() else None
-    # Capture ETag if available
-    etag_value = hdrs.get("etag")
-    if etag_value:
-        cache.set_etag(etag_key, etag_value)
-    cache.set_json(data_key, obj, ttl_for_category(category))
-    return obj
+    max_retries = 3
+    base_sleep = 1.0
+    attempt = 0
+    while True:
+        res = _run_gh(["api", path, "-i", *headers_args])
+        if res.returncode != 0:
+            msg = res.stderr.strip() or "gh api error"
+            raise RuntimeError(msg)
+
+        hdrs, body_text = _split_headers_body(res.stdout)
+        status = int(hdrs.get(":status", "200"))
+
+        # Handle 304 Not Modified via cache
+        if status == 304:
+            cached = cache.get_json(data_key)
+            return cached if cached is not None else []
+
+        # Handle rate limiting/backoff (e.g., 403 with Retry-After or secondary limit)
+        if status == 403:
+            retry_after_hdr = hdrs.get("retry-after") or hdrs.get("x-ratelimit-reset-after")
+            sleep_s: float | None = None
+            if retry_after_hdr:
+                try:
+                    sleep_s = float(retry_after_hdr)
+                except Exception:
+                    sleep_s = None
+            if attempt < max_retries:
+                # Exponential backoff with jitter; prefer server-provided retry_after
+                backoff = sleep_s if sleep_s is not None else min(base_sleep * (2**attempt), 8.0)
+                time.sleep(backoff + (0.05 * backoff))
+                attempt += 1
+                continue
+            # Exhausted retries
+            raise RuntimeError("RATE_LIMIT: secondary limit; retry later")
+
+        # Parse and cache
+        obj = json.loads(body_text) if body_text.strip() else None
+        # Capture ETag if available
+        etag_value = hdrs.get("etag")
+        if etag_value:
+            cache.set_etag(etag_key, etag_value)
+        cache.set_json(data_key, obj, ttl_for_category(category))
+        return obj
 
 
 def pr_list(
