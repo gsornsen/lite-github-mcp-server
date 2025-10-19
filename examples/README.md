@@ -4,6 +4,7 @@ Copyable CLI examples for testing the MCP server.
 
 - Tools listing
   - `just cli_tools`
+  - `LGMCP_MULTI_TOOLS=1 just cli_tools` # grouped names: repo.*, file.*, pr.*, issue.*
 
 - File tree paging
   - `just cli_call gh.file.tree '{"repo_path": ".", "ref": "HEAD", "limit": 3}'`
@@ -23,6 +24,11 @@ Copyable CLI examples for testing the MCP server.
   - `just cli_call gh.pr.comment '{"repo": "gsornsen/lite-github-mcp-server", "number": 3, "body": "Thanks!"}'`
   - `just cli_call gh.pr.review '{"repo": "gsornsen/lite-github-mcp-server", "number": 3, "event": "approve", "body": "LGTM"}'`
   - `just cli_call gh.pr.merge '{"repo": "gsornsen/lite-github-mcp-server", "number": 3, "method": "squash"}'`
+
+  - Multi-tool mode equivalents:
+    - `LGMCP_MULTI_TOOLS=1 just cli_call pr.list '{"repo": "gsornsen/lite-github-mcp-server", "state": "open", "limit": 10}'`
+    - `LGMCP_MULTI_TOOLS=1 just cli_call pr.get '{"repo": "gsornsen/lite-github-mcp-server", "number": 3}'`
+    - `LGMCP_MULTI_TOOLS=1 just cli_call pr.timeline '{"repo": "gsornsen/lite-github-mcp-server", "number": 3, "limit": 5}'`
 
 - Issues
   - `just cli_call gh.issue.list '{"repo": "gsornsen/lite-github-mcp-server", "state": "open", "limit": 10}'`
