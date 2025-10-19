@@ -62,6 +62,7 @@ Emitted fields: `tool`, `arg_keys`, `duration_ms`, optional `error`.
 # Disk-backed cache using `diskcache` under XDG cache dir
 # ETag-based conditional requests are enabled for GitHub REST via gh api
 # Cache TTLs: lists=30s, meta=5m, blobs=1h
+# Automatic rate-limit backoff with Retry-After respected (bounded retries)
 ```
 
 - Context budget checks:
@@ -88,6 +89,8 @@ Context budget (tool registry):
 
 ```bash
 # List tools
+# Mono-tool by default; set multi-tool mode via env:
+# LGMCP_MULTI_TOOLS=1 just cli_tools
 just cli_tools
 
 # Trees (limit, cursor)

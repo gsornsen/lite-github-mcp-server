@@ -130,6 +130,7 @@ def _instrument_tool(func: Any, tool_name: str) -> Any:
 
 
 def register_tools(app: Any) -> None:
+    multi_mode = os.environ.get("LGMCP_MULTI_TOOLS") in {"1", "true", "TRUE", "yes"}
     app.add_tool(
         Tool.from_function(
             _instrument_tool(ping, "gh.ping"), name="gh.ping", description="Health check"
@@ -140,109 +141,116 @@ def register_tools(app: Any) -> None:
             _instrument_tool(whoami, "gh.whoami"), name="gh.whoami", description="gh auth status"
         )
     )
+    # Repo / file / search tools (registered regardless; description kept minimal)
     app.add_tool(
         Tool.from_function(
             _instrument_tool(repo_branches_list, "gh.repo.branches.list"),
-            name="gh.repo.branches.list",
+            name=("repo.branches.list" if multi_mode else "gh.repo.branches.list"),
             description="List branch names",
         )
     )
     app.add_tool(
         Tool.from_function(
             _instrument_tool(file_tree, "gh.file.tree"),
-            name="gh.file.tree",
+            name=("file.tree" if multi_mode else "gh.file.tree"),
             description="List files at ref",
         )
     )
     app.add_tool(
         Tool.from_function(
             _instrument_tool(file_blob, "gh.file.blob"),
-            name="gh.file.blob",
+            name=("file.blob" if multi_mode else "gh.file.blob"),
             description="Get file blob by sha",
         )
     )
     app.add_tool(
         Tool.from_function(
             _instrument_tool(search_files, "gh.search.files"),
-            name="gh.search.files",
+            name=("file.search" if multi_mode else "gh.search.files"),
             description="Search files via git grep",
         )
     )
     app.add_tool(
         Tool.from_function(
             _instrument_tool(repo_resolve, "gh.repo.resolve"),
-            name="gh.repo.resolve",
+            name=("repo.resolve" if multi_mode else "gh.repo.resolve"),
             description="Resolve repo info",
         )
     )
     app.add_tool(
         Tool.from_function(
             _instrument_tool(repo_refs_get, "gh.repo.refs.get"),
-            name="gh.repo.refs.get",
+            name=("repo.refs.get" if multi_mode else "gh.repo.refs.get"),
             description="Resolve ref to sha",
         )
     )
     app.add_tool(
         Tool.from_function(
-            _instrument_tool(pr_list, "gh.pr.list"), name="gh.pr.list", description="List PR ids"
+            _instrument_tool(pr_list, "gh.pr.list"),
+            name=("pr.list" if multi_mode else "gh.pr.list"),
+            description="List PR ids",
         )
     )
     app.add_tool(
         Tool.from_function(
-            _instrument_tool(pr_get, "gh.pr.get"), name="gh.pr.get", description="Get PR meta"
+            _instrument_tool(pr_get, "gh.pr.get"),
+            name=("pr.get" if multi_mode else "gh.pr.get"),
+            description="Get PR meta",
         )
     )
     app.add_tool(
         Tool.from_function(
             _instrument_tool(pr_timeline, "gh.pr.timeline"),
-            name="gh.pr.timeline",
+            name=("pr.timeline" if multi_mode else "gh.pr.timeline"),
             description="PR timeline events",
         )
     )
     app.add_tool(
         Tool.from_function(
             _instrument_tool(pr_files, "gh.pr.files"),
-            name="gh.pr.files",
+            name=("pr.files" if multi_mode else "gh.pr.files"),
             description="PR changed files",
         )
     )
     app.add_tool(
         Tool.from_function(
             _instrument_tool(pr_comment, "gh.pr.comment"),
-            name="gh.pr.comment",
+            name=("pr.comment" if multi_mode else "gh.pr.comment"),
             description="Comment on PR",
         )
     )
     app.add_tool(
         Tool.from_function(
             _instrument_tool(pr_review, "gh.pr.review"),
-            name="gh.pr.review",
+            name=("pr.review" if multi_mode else "gh.pr.review"),
             description="Review PR",
         )
     )
     app.add_tool(
         Tool.from_function(
-            _instrument_tool(pr_merge, "gh.pr.merge"), name="gh.pr.merge", description="Merge PR"
+            _instrument_tool(pr_merge, "gh.pr.merge"),
+            name=("pr.merge" if multi_mode else "gh.pr.merge"),
+            description="Merge PR",
         )
     )
     app.add_tool(
         Tool.from_function(
             _instrument_tool(issue_list, "gh.issue.list"),
-            name="gh.issue.list",
+            name=("issue.list" if multi_mode else "gh.issue.list"),
             description="List issues",
         )
     )
     app.add_tool(
         Tool.from_function(
             _instrument_tool(issue_get, "gh.issue.get"),
-            name="gh.issue.get",
+            name=("issue.get" if multi_mode else "gh.issue.get"),
             description="Get issue",
         )
     )
     app.add_tool(
         Tool.from_function(
             _instrument_tool(issue_comment, "gh.issue.comment"),
-            name="gh.issue.comment",
+            name=("issue.comment" if multi_mode else "gh.issue.comment"),
             description="Comment on issue",
         )
     )
