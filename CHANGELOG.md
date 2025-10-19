@@ -1,3 +1,9 @@
+## v0.4.0 (2025-10-19)
+
+### Feat
+
+- **build,ci,docs**: migrate to uv dependency groups; add uvx docs; switch CI to --group dev; add PyPI publish workflow
+
 ## v0.3.0 (2025-10-19)
 
 ### Feat
