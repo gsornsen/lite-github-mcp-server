@@ -1,3 +1,9 @@
+## v0.3.0 (2025-10-19)
+
+### Feat
+
+- **gh_cli**: rate-limit backoff with Retry-After; feat(router): multi-tool toggle
+
 ## v0.2.0 (2025-10-18)
 
 ### Feat
